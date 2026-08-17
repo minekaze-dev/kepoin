@@ -16,7 +16,7 @@ import { useLanguage } from '../lib/i18n';
 import { useTheme } from '../lib/theme';
 
 export const Home = () => {
-  const { t, lang, toggleLang } = useLanguage();
+  const { t, lang, toggleLang, formatRelativeTime, formatTimeLeft, getCategoryLabel, getAnswerCountLabel, getTalkCountLabel } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   
@@ -565,15 +565,8 @@ export const Home = () => {
               
               const isTrending = trendingTab === 'trending';
               const rank = idx + 1;
-              const dropDate = new Date(drop.createdAt);
-              const now = new Date();
-              const diffHours = Math.round((now.getTime() - dropDate.getTime()) / (1000 * 60 * 60));
-              const timeString = diffHours < 1 ? 'baru saja' : `${diffHours} jam yang lalu`;
-              
-              // time left
-              const expiry = new Date(drop.expiresAt);
-              const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-              const timeLeftString = daysLeft > 0 ? `${daysLeft} Hari tersisa` : 'Berakhir';
+              const timeString = formatRelativeTime(drop.createdAt);
+              const timeLeftString = formatTimeLeft(drop.expiresAt);
 
               return (
                 <div key={drop.id} className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 hover:shadow-md transition-shadow relative group overflow-hidden">
@@ -601,12 +594,7 @@ export const Home = () => {
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text border border-gray-200 dark:border-dark-border">
-                          {drop.type === 'PHOTO' ? '📸 Foto' : 
-                           drop.type === 'TEXT' ? '📝 Teks' : 
-                           drop.type === 'NUMBER' ? '🔢 Angka' : 
-                           drop.type === 'CHOICE' ? '🗳️ Pilihan' : 
-                           drop.type === 'SONG' ? '🎵 Lagu' : 
-                           drop.type === 'PLACE' ? '📍 Lokasi' : drop.type}
+                          {getCategoryLabel(drop.type)}
                         </span>
                         <span className="text-[10px] sm:text-[11px] font-bold text-[#12A889]">
                           {timeLeftString}
@@ -701,13 +689,17 @@ export const Home = () => {
                         <span className="font-extrabold text-[13px] sm:text-[14px] text-gray-900 dark:text-white">
                           {responses.length >= 1000 ? (responses.length/1000).toFixed(1) + 'K' : responses.length}
                         </span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider">JAWABAN</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                          {getAnswerCountLabel(responses.length, true)}
+                        </span>
                       </div>
                       <div className="flex flex-row items-center justify-end gap-1.5">
                         <span className="font-extrabold text-[11px] sm:text-[12px] text-gray-700 dark:text-gray-300">
                           {talks}
                         </span>
-                        <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">OBROLAN</span>
+                        <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                          {getTalkCountLabel(talks, true)}
+                        </span>
                       </div>
                     </div>
 
@@ -807,7 +799,7 @@ export const Home = () => {
     
               <div className="flex items-center justify-between relative z-10">
                 <span className="text-[12px] text-white/80 font-medium">
-                  {(voteCounts.a + voteCounts.b).toLocaleString('id-ID')} jawaban
+                  {(voteCounts.a + voteCounts.b).toLocaleString(lang === 'en' ? 'en-US' : 'id-ID')} {getAnswerCountLabel(voteCounts.a + voteCounts.b, false)}
                 </span>
               </div>
             </div>
@@ -816,7 +808,7 @@ export const Home = () => {
             <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
               <div className="flex items-center gap-2 mb-4">
                 <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-dark-muted">
-                  LAGI RAMAI 🔥
+                  {lang === 'en' ? 'TRENDING NOW 🔥' : (lang === 'slank' ? 'LAGI RAME 🔥' : 'LAGI RAMAI 🔥')}
                 </h3>
               </div>
               <div className="flex flex-col gap-4">
@@ -846,7 +838,7 @@ export const Home = () => {
                         <p className="text-[11px] text-gray-500 dark:text-dark-muted font-medium">
                           <span className="text-gray-900 dark:text-dark-text font-bold">
                             {responses.length >= 1000 ? (responses.length/1000).toFixed(1) + 'K' : responses.length}
-                          </span> jawaban
+                          </span> {getAnswerCountLabel(responses.length, false)}
                         </p>
                       </div>
                     </Link>
@@ -861,32 +853,32 @@ export const Home = () => {
         <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
           <div className="flex items-center gap-2 mb-4">
             <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-dark-muted">
-              👀 ORANG LAGI KEPO
+              {lang === 'en' ? '👀 PEOPLE ARE CURIOUS' : (lang === 'slank' ? '👀 PADA LAGI KEPO' : '👀 ORANG LAGI KEPO')}
             </h3>
           </div>
           <div className="flex flex-col gap-3">
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                 <span className="text-[16px]">📸</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">38</strong> sedang lihat Foto</span>
+                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">38</strong> {lang === 'en' ? 'viewing Photos' : (lang === 'slank' ? 'lagi liat Foto' : 'sedang lihat Foto')}</span>
               </div>
             </div>
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                 <span className="text-[16px]">🎵</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">27</strong> sedang cari Lagu</span>
+                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">27</strong> {lang === 'en' ? 'searching Songs' : (lang === 'slank' ? 'lagi cari Lagu' : 'sedang cari Lagu')}</span>
               </div>
             </div>
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                 <span className="text-[16px]">🔢</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">19</strong> sedang jawab Angka</span>
+                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">19</strong> {lang === 'en' ? 'answering Numbers' : (lang === 'slank' ? 'lagi jawab Angka' : 'sedang jawab Angka')}</span>
               </div>
             </div>
             <div className="flex items-center justify-between group">
               <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                 <span className="text-[16px]">💬</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">42</strong> sedang ngobrol</span>
+                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">42</strong> {lang === 'en' ? 'chatting in talks' : (lang === 'slank' ? 'lagi ngobrol' : 'sedang ngobrol')}</span>
               </div>
             </div>
           </div>

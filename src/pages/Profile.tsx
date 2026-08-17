@@ -189,9 +189,9 @@ export const Profile = () => {
                         </span>
                         <div className="flex items-center gap-3">
                           <span className="text-[11.5px] text-gray-400 dark:text-dark-muted flex gap-1.5 items-center font-medium">
-                            <span>{storage.getResponses(drop.id).length} drops</span>
+                            <span>{storage.getResponses(drop.id).length} {lang === 'en' ? (storage.getResponses(drop.id).length === 1 ? 'answer' : 'answers') : 'jawaban'}</span>
                             <span>·</span>
-                            <span>{getTotalTalks(drop.id)} {lang === 'id' ? 'obrolan' : 'talks'}</span>
+                            <span>{getTotalTalks(drop.id)} {lang === 'en' ? (getTotalTalks(drop.id) === 1 ? 'talk' : 'talks') : 'obrolan'}</span>
                           </span>
                         </div>
                       </div>

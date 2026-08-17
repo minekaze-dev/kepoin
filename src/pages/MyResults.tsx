@@ -57,11 +57,11 @@ export const MyResults = () => {
               <div className="flex flex-wrap items-center gap-3 text-[12px]">
                 <span className="text-gray-400 dark:text-dark-muted uppercase font-bold tracking-wider">{t.create.types[drop.type.toUpperCase() as keyof typeof t.create.types] || drop.type}</span>
                 <span className="text-gray-500 dark:text-dark-muted flex gap-1.5 items-center">
-                  <span>{storage.getResponses(drop.id).length} drops</span>
+                  <span>{storage.getResponses(drop.id).length} {lang === 'en' ? (storage.getResponses(drop.id).length === 1 ? 'answer' : 'answers') : 'jawaban'}</span>
                   {getTotalTalks(drop.id) > 0 && (
                     <>
                       <span>•</span>
-                      <span>{getTotalTalks(drop.id)} {lang === 'id' ? 'obrolan' : 'talks'}</span>
+                      <span>{getTotalTalks(drop.id)} {lang === 'en' ? (getTotalTalks(drop.id) === 1 ? 'talk' : 'talks') : 'obrolan'}</span>
                     </>
                   )}
                 </span>

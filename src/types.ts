@@ -39,6 +39,7 @@ export interface DropBoard {
     saves: number;
   };
   isGuest?: boolean;
+  reactions?: Reaction[];
   talks?: Talk[];
 }
 
@@ -129,18 +130,36 @@ export interface ActivityLog {
   type: 'USER' | 'ASK' | 'ANSWER' | 'MODERATION' | 'REPORT';
 }
 
-export type NotificationType = 'RESPONSE' | 'COMMENT' | 'REACTION';
+export type NotificationPriority = 'HIGH' | 'MEDIUM' | 'INFO';
+
+export type NotificationType = 
+  | 'ANSWER' 
+  | 'TALK' 
+  | 'MENTION' 
+  | 'REACTION_DROP' 
+  | 'REACTION_ANSWER' 
+  | 'EXPIRING_12H' 
+  | 'EXPIRING_1H' 
+  | 'EXPIRED' 
+  | 'RESPONSE' 
+  | 'COMMENT' 
+  | 'REACTION';
 
 export interface AppNotification {
   id: string;
   userId: string;
-  actorName: string;
+  actorName?: string;
   actorAvatar?: string;
   type: NotificationType;
+  priority?: NotificationPriority;
+  emoji?: string;
+  actorCount?: number;
   message: string;
   dropId: string;
   dropSlug: string;
   dropPrompt: string;
+  responseId?: string;
+  talkId?: string;
   createdAt: string;
   read: boolean;
   linkUrl: string;

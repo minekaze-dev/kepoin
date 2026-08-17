@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ShieldAlert, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { ReportTargetType, ReportReason } from '../types';
 import { storage } from '../lib/storage';
@@ -92,13 +93,13 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     },
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl relative overflow-hidden">
+  const modalContent = (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 sm:p-7 shadow-2xl relative">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 text-gray-400 hover:text-charcoal dark:hover:text-dark-text rounded-full hover:bg-gray-100 dark:hover:bg-dark-bg transition-colors"
+          className="absolute top-5 right-5 p-2 text-gray-400 hover:text-charcoal dark:hover:text-dark-text rounded-full hover:bg-gray-100 dark:hover:bg-dark-bg transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -228,4 +229,6 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

@@ -29,8 +29,21 @@ export const demoUser: UserProfile = {
   joinedAt: '2026-08-10T00:00:00.000Z',
 };
 
+export const adminUser: UserProfile = {
+  id: 'a0000000-0000-0000-0000-000000000001',
+  name: 'Super Administrator',
+  username: '@admin',
+  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=AdminKepoinMaster',
+  bio: 'Kepoin System Administrator & Content Moderator.',
+  location: 'Jakarta, ID',
+  joinedAt: '2026-08-01T00:00:00.000Z',
+  role: 'ADMIN',
+  status: 'ACTIVE',
+};
+
 // 20 Realistic Indonesian Dummy User Profiles
 export const dummyUsers: UserProfile[] = [
+  adminUser,
   demoUser,
   {
     id: 'user_raka',

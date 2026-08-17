@@ -19,7 +19,8 @@ import {
   Globe,
   ChevronLeft,
   LogOut,
-  Flag
+  Flag,
+  ShieldCheck
 } from 'lucide-react';
 import { storage } from '../lib/storage';
 import { useLanguage } from '../lib/i18n';
@@ -71,6 +72,7 @@ export const Sidebar = () => {
   const { theme, toggleTheme } = useTheme();
   const user = storage.getUser();
   const isLoggedIn = storage.getIsLoggedIn();
+  const isAdmin = isLoggedIn && (user.role === 'ADMIN' || user.username?.toLowerCase() === '@admin' || user.username?.toLowerCase() === 'admin' || storage.getIsAdmin());
 
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -217,23 +219,61 @@ export const Sidebar = () => {
       )}
 
       {isLoggedIn && (
-        <div className={`mt-2 pt-4 relative z-10 bg-white dark:bg-dark-surface space-y-2 border-t border-gray-100 dark:border-dark-border ${isCollapsedActual ? 'flex flex-col items-center w-full' : 'px-2'}`}>
+        <div className={`mt-2 pt-3.5 relative z-10 bg-white dark:bg-dark-surface space-y-2 border-t border-gray-100 dark:border-dark-border ${isCollapsedActual ? 'flex flex-col items-center w-full' : 'px-2'}`}>
+          {/* Admin Panel Quick Access Button (Above Super Admin) */}
+          {isAdmin && (
+            <Link
+              to="/admin"
+              onClick={() => storage.setIsAdmin(true)}
+              className={`flex items-center transition-all ${
+                isCollapsedActual 
+                  ? 'w-10 h-10 rounded-xl justify-center bg-emerald-500/10 dark:bg-emerald-500/20 text-[#12A889] dark:text-emerald-400 hover:bg-[#12A889] hover:text-white dark:hover:bg-[#12A889] dark:hover:text-white mb-1 shadow-xs' 
+                  : 'w-full gap-2.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-[#12A889] dark:bg-emerald-500/15 dark:hover:bg-[#12A889] border border-emerald-500/30 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-300 hover:text-white dark:hover:text-white font-semibold text-[13px] shadow-sm mb-1.5 group transition-colors'
+              }`}
+              title={lang === 'en' ? 'Go to Admin Panel' : 'Masuk ke Admin Panel'}
+            >
+              <ShieldCheck size={isCollapsedActual ? 20 : 18} className="text-[#12A889] dark:text-emerald-400 group-hover:text-white transition-colors shrink-0" />
+              {!isCollapsedActual && (
+                <div className="flex items-center justify-between flex-1">
+                  <span>{lang === 'en' ? 'Admin Panel' : 'Admin Panel'}</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-[#12A889] text-white group-hover:bg-white group-hover:text-[#12A889] transition-colors">
+                    Control
+                  </span>
+                </div>
+              )}
+            </Link>
+          )}
+
           <div className={`flex items-center ${isCollapsedActual ? 'justify-center' : 'gap-3 px-2 py-1.5'}`}>
-            <img 
-              src={user.avatar} 
-              alt={user.name} 
-              className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-bg shrink-0"
-            />
+            <div className="relative shrink-0">
+              <img 
+                src={user.avatar} 
+                alt={user.name} 
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-bg"
+              />
+              {isAdmin && (
+                <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-[#12A889] border-2 border-white dark:border-dark-surface rounded-full flex items-center justify-center text-[7px] text-white font-bold" title="Admin">
+                  ✓
+                </span>
+              )}
+            </div>
             {!isCollapsedActual && (
-              <div className="flex flex-col overflow-hidden">
-                <span className="text-[13px] font-semibold text-charcoal dark:text-dark-text truncate">{user.name}</span>
+              <div className="flex flex-col overflow-hidden flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-semibold text-charcoal dark:text-dark-text truncate">{user.name}</span>
+                  {isAdmin && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                      ADMIN
+                    </span>
+                  )}
+                </div>
                 <span className="text-[11px] text-gray-400 dark:text-dark-muted truncate">{user.username}</span>
               </div>
             )}
           </div>
           <button 
-            onClick={() => { storage.setIsLoggedIn(false); window.location.reload(); }}
-            className={`flex items-center justify-center rounded-full transition-colors ${isCollapsedActual ? 'w-10 h-10 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'w-full gap-2 bg-gray-50 dark:bg-dark-bg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-600 dark:text-dark-muted hover:text-red-600 dark:hover:text-red-400 text-[13px] font-medium py-2 px-3 border border-gray-100 dark:border-dark-border'}`}
+            onClick={() => { storage.setIsLoggedIn(false); storage.setIsAdmin(false); window.location.reload(); }}
+            className={`flex items-center justify-center rounded-full transition-colors ${isCollapsedActual ? 'w-10 h-10 bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'w-full gap-2 bg-gray-50 dark:bg-dark-bg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-600 dark:text-dark-muted hover:text-red-600 dark:hover:text-red-400 text-[13px] font-medium py-2 px-3 border border-gray-100 dark:border-dark-border cursor-pointer'}`}
           >
             <LogOut size={18} />
             {!isCollapsedActual && <span>Log out</span>}

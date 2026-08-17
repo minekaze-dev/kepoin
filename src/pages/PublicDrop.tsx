@@ -25,11 +25,15 @@ import {
   ChevronDown,
   MessageCircle,
   LayoutGrid,
-  List
+  List,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 import { storage } from '../lib/storage';
 import { DropBoard, DropResponse, ResponseType } from '../types';
 import { useLanguage } from '../lib/i18n';
+
+const REACTION_EMOJIS = ['❤️', '😂', '🔥', '👀', '👍'];
 
 export const PublicDrop = () => {
   const { t, lang } = useLanguage();
@@ -42,16 +46,22 @@ export const PublicDrop = () => {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [isSaved, setIsSaved] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [dropUserReactions, setDropUserReactions] = useState<string[]>([]);
 
   useEffect(() => {
+    storage.checkAndNotifyExpiringDrops();
     const allDrops = storage.getDrops();
     const foundDrop = allDrops.find(d => d.slug === slug);
     if (foundDrop) {
       setDrop(foundDrop);
       setResponses(storage.getResponses(foundDrop.id));
       setIsSaved(storage.getSavedDrops().includes(foundDrop.id));
+      const userReactions = storage.getUserReactions();
+      setDropUserReactions(userReactions[foundDrop.id] || []);
     }
   }, [slug]);
+
+  const isExpired = drop ? storage.isDropExpired(drop) : false;
 
   const handleToggleSave = () => {
     if (!drop) return;
@@ -61,6 +71,21 @@ export const PublicDrop = () => {
     }
     const added = storage.toggleSaveDrop(drop.id);
     setIsSaved(added);
+  };
+
+  const handleDropReact = (emoji: string) => {
+    if (!drop) return;
+    if (!storage.getIsLoggedIn()) {
+      window.dispatchEvent(new Event('open-login-modal'));
+      return;
+    }
+    if (isExpired) return;
+    storage.toggleDropReaction(drop.id, emoji);
+    const allDrops = storage.getDrops();
+    const found = allDrops.find(d => d.id === drop.id);
+    if (found) setDrop(found);
+    const userReactions = storage.getUserReactions();
+    setDropUserReactions(userReactions[drop.id] || []);
   };
 
   const handleResponseAdded = () => {
@@ -75,6 +100,7 @@ export const PublicDrop = () => {
       window.dispatchEvent(new Event('open-login-modal'));
       return;
     }
+    if (isExpired) return;
     setIsModalOpen(true);
   };
 
@@ -82,8 +108,8 @@ export const PublicDrop = () => {
 
   const sortedResponses = [...responses].sort((a, b) => {
     if (sortBy === 'top') {
-      const aLikes = a.reactions?.find(r => r.emoji === '❤️')?.count || 0;
-      const bLikes = b.reactions?.find(r => r.emoji === '❤️')?.count || 0;
+      const aLikes = (a.reactions || []).reduce((acc, curr) => acc + curr.count, 0);
+      const bLikes = (b.reactions || []).reduce((acc, curr) => acc + curr.count, 0);
       return bLikes - aLikes;
     }
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -97,6 +123,18 @@ export const PublicDrop = () => {
         {t.public.back}
       </Link>
 
+      {/* Expiration Notice Banner (Rule 9: Pertanyaan hanya aktif 3 hari) */}
+      {isExpired && (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/40 rounded-2xl p-4 flex items-center gap-3 text-amber-900 dark:text-amber-200 text-[13px] shadow-xs">
+          <Clock size={20} className="shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="font-medium leading-snug">
+            {lang === 'id' 
+              ? 'Pertanyaan ini telah melewati masa aktif 3 hari dan telah berakhir. Jawaban baru dan obrolan telah ditutup.' 
+              : 'This question has passed its 3-day active window and is now expired. New answers and talks are closed.'}
+          </p>
+        </div>
+      )}
+
       {/* Hero / Header */}
       <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 md:p-8 space-y-6">
@@ -106,9 +144,9 @@ export const PublicDrop = () => {
                 <span className="bg-orange-50 dark:bg-[#12A889]/10 text-[#12A889] dark:text-[#12A889] px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider">
                   {t.create.types[drop.type.toUpperCase() as keyof typeof t.create.types] || drop.type}
                 </span>
-                <span className={`flex items-center gap-1 text-[11px] font-bold ${drop.status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${drop.status === 'ACTIVE' ? 'bg-green-600' : 'bg-red-500'}`} />
-                  {drop.status}
+                <span className={`flex items-center gap-1 text-[11px] font-bold ${!isExpired && drop.status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${!isExpired && drop.status === 'ACTIVE' ? 'bg-green-600' : 'bg-red-500'}`} />
+                  {isExpired ? (lang === 'id' ? 'BERAKHIR' : 'EXPIRED') : drop.status}
                 </span>
               </div>
               <h1 className="text-3xl font-black text-charcoal dark:text-dark-text uppercase leading-tight">
@@ -127,7 +165,9 @@ export const PublicDrop = () => {
 
               <div className="flex items-center justify-between gap-3 text-[13px] text-gray-400 dark:text-dark-muted pt-2">
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-gray-600 dark:text-dark-text">{responses.length} {t.profile.stats.drops.toLowerCase()}</span>
+                  <span className="font-bold text-gray-600 dark:text-dark-text">
+                    {responses.length} {lang === 'en' ? (responses.length === 1 ? 'answer' : 'answers') : 'jawaban'}
+                  </span>
                   <span>•</span>
                   <span>
                     {t.public.createdBy}{' '}
@@ -151,7 +191,7 @@ export const PublicDrop = () => {
                     onClick={() => {
                       const url = window.location.href;
                       navigator.clipboard.writeText(url);
-                      alert('Tautan drop disalin ke clipboard!');
+                      alert(lang === 'en' ? 'Share link copied to clipboard!' : 'Tautan berhasil disalin ke clipboard!');
                     }}
                     className="p-2 bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border text-gray-400 dark:text-dark-muted hover:border-gray-200 dark:hover:border-dark-muted rounded-lg transition-all"
                   >
@@ -170,6 +210,33 @@ export const PublicDrop = () => {
                   />
                 </div>
               </div>
+
+              {/* Reaction Bar on Drop Board (Rule 3: Reaction ❤️ 😂 🔥 👀 👍) */}
+              <div className="pt-3 border-t border-gray-100 dark:border-dark-border flex items-center flex-wrap gap-2">
+                <span className="text-[12px] font-bold text-gray-400 dark:text-dark-muted mr-1">
+                  {lang === 'id' ? 'Reaksi Pertanyaan:' : 'Question Reactions:'}
+                </span>
+                {REACTION_EMOJIS.map((emoji) => {
+                  const isUserReacted = dropUserReactions.includes(emoji);
+                  const count = (drop.reactions?.find(r => r.emoji === emoji)?.count) || 0;
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      disabled={isExpired}
+                      onClick={() => handleDropReact(emoji)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-bold transition-all ${
+                        isUserReacted 
+                          ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 ring-2 ring-amber-400 dark:ring-amber-600 scale-105' 
+                          : 'bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border hover:scale-105'
+                      } ${isExpired ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                    >
+                      <span>{emoji}</span>
+                      {count > 0 && <span className="text-[11px] font-black">{count}</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -177,15 +244,15 @@ export const PublicDrop = () => {
         <div className="px-6 md:px-8 pb-6 md:pb-8">
           <button 
             onClick={handleOpenDropYours}
-            disabled={drop.status !== 'ACTIVE'}
+            disabled={isExpired || drop.status !== 'ACTIVE'}
             className={`
               w-full flex items-center justify-center gap-2 py-4 rounded-xl text-[16px] font-black transition-all shadow-lg
-              ${drop.status === 'ACTIVE' 
-                ? 'bg-[#12A889] text-white hover:bg-[#12A889] shadow-[#12A889]/20' 
+              ${!isExpired && drop.status === 'ACTIVE'
+                ? 'bg-[#12A889] text-white hover:bg-[#12A889] shadow-[#12A889]/20 cursor-pointer' 
                 : 'bg-gray-100 dark:bg-dark-border text-gray-400 dark:text-dark-muted cursor-not-allowed'}
             `}
           >
-            {t.public.dropMine}
+            {isExpired ? (lang === 'id' ? 'Pertanyaan Berakhir (Ditutup)' : 'Question Expired (Closed)') : t.public.dropMine}
           </button>
         </div>
       </div>
@@ -289,26 +356,37 @@ export const PublicDrop = () => {
 const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks = true, viewMode = 'grid' }: { response: DropResponse, drop?: DropBoard | null, type: ResponseType, isOwner?: boolean, onPhotoClick?: (url: string) => void, allowTalks?: boolean, viewMode?: 'grid' | 'list', key?: React.Key }) => {
   const { t, lang } = useLanguage();
   const [localResponse, setLocalResponse] = useState(response);
-  const [localReactions, setLocalReactions] = useState(response.reactions);
-  const [isReacted, setIsReacted] = useState(false);
+  const [localReactions, setLocalReactions] = useState(response.reactions || []);
+  const [userReactedEmojis, setUserReactedEmojis] = useState<string[]>([]);
   const [isTalksExpanded, setIsTalksExpanded] = useState(false);
+  const [isTalkAnon, setIsTalkAnon] = useState(false);
+
+  const isExpired = drop ? storage.isDropExpired(drop) : false;
 
   useEffect(() => {
     const userReactions = storage.getUserReactions();
-    setIsReacted(userReactions[response.id]?.includes('❤️') || false);
-  }, [response.id]);
+    setUserReactedEmojis(userReactions[response.id] || []);
+    setLocalResponse(response);
+    setLocalReactions(response.reactions || []);
+  }, [response]);
 
-  const handleReact = () => {
+  const handleReact = (emoji: string) => {
     if (!storage.getIsLoggedIn()) {
       window.dispatchEvent(new Event('open-login-modal'));
       return;
     }
-    storage.toggleReaction(response.id, '❤️');
-    setIsReacted(!isReacted);
-    // Refresh local count (simplistic)
+    if (isExpired) return;
+    storage.toggleReaction(response.id, emoji);
+    
+    // Refresh local
     const updatedResponses = storage.getResponses();
     const updated = updatedResponses.find(r => r.id === response.id);
-    if (updated) setLocalReactions(updated.reactions);
+    if (updated) {
+      setLocalResponse(updated);
+      setLocalReactions(updated.reactions || []);
+    }
+    const userReactions = storage.getUserReactions();
+    setUserReactedEmojis(userReactions[response.id] || []);
   };
 
   const isListMode = viewMode === 'list' && type === 'PHOTO';
@@ -427,7 +505,9 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
               </span>
             )}
           </div>
-          <span className="text-[11px] text-gray-400 dark:text-dark-muted ml-auto flex-shrink-0">2h ago</span>
+          <span className="text-[11px] text-gray-400 dark:text-dark-muted ml-auto flex-shrink-0">
+            {new Date(response.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+          </span>
           <ContentMenu 
             targetType="ANSWER" 
             targetId={response.id} 
@@ -444,28 +524,42 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
           <p className={`text-[13.5px] text-gray-600 dark:text-gray-300 line-clamp-3 leading-relaxed ${isListMode ? '' : 'mb-4'}`}>{response.caption}</p>
         )}
 
+        {/* Reactions Bar on Answer Card */}
         <div className={`mt-auto flex items-center justify-between border-gray-50 dark:border-dark-border ${isListMode ? 'pt-1' : 'border-t pt-3'}`}>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handleReact}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-bold transition-all ${isReacted ? 'bg-red-50 dark:bg-red-500/10 text-red-500' : 'bg-gray-50 dark:bg-dark-bg text-gray-400 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border'}`}
-          >
-            <Heart size={14} fill={isReacted ? 'currentColor' : 'none'} />
-            {localReactions.find(r => r.emoji === '❤️')?.count || 0}
-          </button>
-          {allowTalks && (
-            <button 
-              onClick={() => setIsTalksExpanded(!isTalksExpanded)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-bold transition-all ${isTalksExpanded ? 'bg-orange-50 dark:bg-[#12A889]/10 text-[#12A889]' : 'bg-gray-50 dark:bg-dark-bg text-gray-400 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border'}`}
-            >
-              <MessageCircle size={14} fill={isTalksExpanded ? 'currentColor' : 'none'} />
-              {localResponse.talks?.length || 0}
-            </button>
-          )}
+          <div className="flex items-center flex-wrap gap-1.5">
+            {REACTION_EMOJIS.map((emoji) => {
+              const isUserReacted = userReactedEmojis.includes(emoji);
+              const count = (localReactions.find(r => r.emoji === emoji)?.count) || 0;
+              return (
+                <button 
+                  key={emoji}
+                  disabled={isExpired}
+                  onClick={() => handleReact(emoji)}
+                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold transition-all ${
+                    isUserReacted 
+                      ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 ring-1 ring-amber-400' 
+                      : 'bg-gray-50 dark:bg-dark-bg text-gray-400 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border'
+                  } ${isExpired ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span>{emoji}</span>
+                  {count > 0 && <span>{count}</span>}
+                </button>
+              );
+            })}
+
+            {allowTalks && (
+              <button 
+                onClick={() => setIsTalksExpanded(!isTalksExpanded)}
+                className={`flex items-center gap-1.5 ml-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${isTalksExpanded ? 'bg-orange-50 dark:bg-[#12A889]/10 text-[#12A889]' : 'bg-gray-50 dark:bg-dark-bg text-gray-400 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border cursor-pointer'}`}
+              >
+                <MessageCircle size={13} fill={isTalksExpanded ? 'currentColor' : 'none'} />
+                <span>{localResponse.talks?.length || 0}</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
-      </div>
       <AnimatePresence>
         {isTalksExpanded && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto" onClick={() => setIsTalksExpanded(false)}>
@@ -476,7 +570,7 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
               className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-2xl overflow-hidden flex flex-col md:flex-row w-full max-w-4xl shadow-2xl relative my-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Left Column: Drop Image & Content Preview (Facebook style post view) */}
+              {/* Left Column: Drop Image & Content Preview */}
               <div className="w-full md:w-1/2 bg-gray-50 dark:bg-dark-bg p-6 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100 dark:border-dark-border overflow-y-auto max-h-[50vh] md:max-h-[90vh]">
                 <div>
                   {drop && (
@@ -507,14 +601,19 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                   )}
                 </div>
 
-                <div className="flex items-center gap-4 text-xs text-gray-500 pt-4 border-t border-gray-200 dark:border-dark-border">
-                  <div className="flex items-center gap-1.5 font-bold">
-                    <Heart size={16} className="text-red-500" fill="currentColor" />
-                    {localReactions.find(r => r.emoji === '❤️')?.count || 0} {lang === 'id' ? 'Suka' : 'Likes'}
-                  </div>
-                  <div className="flex items-center gap-1.5 font-bold text-[#12A889]">
-                    <MessageCircle size={16} fill="currentColor" />
-                    {localResponse.talks?.length || 0} {lang === 'id' ? 'Obrolan' : 'Talks'}
+                <div className="flex items-center gap-3 text-xs text-gray-500 pt-4 border-t border-gray-200 dark:border-dark-border flex-wrap">
+                  {REACTION_EMOJIS.map(emoji => {
+                    const count = (localReactions.find(r => r.emoji === emoji)?.count) || 0;
+                    if (count === 0) return null;
+                    return (
+                      <span key={emoji} className="flex items-center gap-1 font-bold bg-white dark:bg-dark-surface px-2 py-0.5 rounded-full border border-gray-200 dark:border-dark-border">
+                        {emoji} {count}
+                      </span>
+                    );
+                  })}
+                  <div className="flex items-center gap-1.5 font-bold text-[#12A889] ml-auto">
+                    <MessageCircle size={15} fill="currentColor" />
+                    {localResponse.talks?.length || 0} {lang === 'en' ? (localResponse.talks?.length === 1 ? 'Talk' : 'Talks') : 'Obrolan'}
                   </div>
                 </div>
               </div>
@@ -522,7 +621,9 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
               {/* Right Column: Comments / Talks Stream & Input */}
               <div className="w-full md:w-1/2 flex flex-col max-h-[50vh] md:max-h-[90vh]">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border">
-                  <h3 className="font-bold text-gray-900 dark:text-dark-text text-[15px]">{lang === 'id' ? 'Obrolan (Talks)' : 'Talks'}</h3>
+                  <h3 className="font-bold text-gray-900 dark:text-dark-text text-[15px]">
+                    {lang === 'en' ? 'Talks & Comments' : (lang === 'slank' ? 'Obrolan (Talks)' : 'Obrolan (Talks)')}
+                  </h3>
                   <button onClick={() => setIsTalksExpanded(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-dark-bg text-gray-500 dark:text-dark-muted hover:bg-gray-200 dark:hover:bg-dark-border flex items-center justify-center transition-colors">
                     <X size={18} />
                   </button>
@@ -536,20 +637,14 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                   )}
                   {localResponse.talks?.map(talk => (
                     <div key={talk.id} className="flex gap-3">
-                      <Link 
-                        to={`/profile/${talk.userName.toLowerCase()}`}
-                        className="w-8 h-8 rounded-full bg-gray-200 dark:bg-dark-border flex-shrink-0 overflow-hidden hover:opacity-80 transition-opacity"
-                      >
-                         <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${talk.userName}`} alt="avatar" className="w-full h-full" />
-                      </Link>
+                      <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-dark-border flex-shrink-0 overflow-hidden">
+                         <img src={talk.isAnonymous ? `https://api.dicebear.com/7.x/avataaars/svg?seed=Anon` : (talk.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${talk.userName}`)} alt="avatar" className="w-full h-full" />
+                      </div>
                       <div className="flex-1 bg-gray-50 dark:bg-dark-bg rounded-2xl px-4 py-2.5">
                         <div className="flex items-center justify-between">
-                          <Link 
-                            to={`/profile/${talk.userName.toLowerCase()}`}
-                            className="text-[13px] font-bold dark:text-dark-text hover:text-[#12A889] transition-colors"
-                          >
+                          <span className="text-[13px] font-bold dark:text-dark-text">
                             {talk.userName}
-                          </Link>
+                          </span>
                           <span className="text-[10px] text-gray-400">
                             {new Date(talk.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
@@ -560,7 +655,23 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                   ))}
                 </div>
 
-                <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-surface">
+                <div className="p-4 border-t border-gray-100 dark:border-dark-border bg-white dark:bg-dark-surface space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="flex items-center gap-2 text-[12px] font-medium text-gray-600 dark:text-dark-muted cursor-pointer select-none">
+                      <input 
+                        type="checkbox" 
+                        checked={isTalkAnon} 
+                        onChange={(e) => setIsTalkAnon(e.target.checked)}
+                        className="rounded text-[#12A889] focus:ring-[#12A889]"
+                      />
+                      <span>{lang === 'id' ? 'Kirim sebagai Anonim' : 'Send as Anonymous'}</span>
+                    </label>
+                    {isExpired && (
+                      <span className="text-[11px] font-bold text-red-500">
+                        {lang === 'id' ? 'Obrolan ditutup (expired)' : 'Talks closed (expired)'}
+                      </span>
+                    )}
+                  </div>
                   <form 
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -568,14 +679,19 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                         window.dispatchEvent(new Event('open-login-modal'));
                         return;
                       }
+                      if (isExpired) return;
                       const form = e.target as HTMLFormElement;
                       const input = form.elements.namedItem('talk') as HTMLInputElement;
-                      if (input.value.trim()) {
+                      const text = input.value.trim();
+                      if (text) {
                         const currentUser = storage.getUser();
+                        const talkUserName = isTalkAnon ? (lang === 'id' ? 'Seseorang (Anonim)' : 'Anonymous') : currentUser.name;
                         const newTalk = {
-                          id: Math.random().toString(),
-                          userName: currentUser.name,
-                          content: input.value,
+                          id: Math.random().toString(36).substr(2, 9),
+                          userName: talkUserName,
+                          avatar: isTalkAnon ? undefined : (currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`),
+                          content: text,
+                          isAnonymous: isTalkAnon,
                           createdAt: new Date().toISOString()
                         };
                         const updatedResponse = { ...localResponse, talks: [...(localResponse.talks || []), newTalk] };
@@ -583,16 +699,34 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                         setLocalResponse(updatedResponse);
 
                         if (drop) {
+                          // Rule 2: TALK / OBROLAN notification to Drop Owner
+                          const actorDisplayName = isTalkAnon ? (lang === 'id' ? 'Seseorang (Anonim)' : 'Someone (Anonymous)') : currentUser.name;
                           storage.addNotification({
                             userId: drop.ownerId,
-                            actorName: currentUser.name,
-                            actorAvatar: currentUser.avatar,
-                            type: 'COMMENT',
-                            message: lang === 'id' ? 'mengirim obrolan di kiriman kamu' : 'sent a talk on your share',
+                            actorName: actorDisplayName,
+                            actorAvatar: isTalkAnon ? undefined : currentUser.avatar,
+                            type: 'TALK',
+                            message: lang === 'id' ? 'ikut ngobrol di pertanyaanmu.' : 'joined the talk on your question.',
                             dropId: drop.id,
                             dropSlug: drop.slug,
                             dropPrompt: drop.prompt,
+                            responseId: response.id,
+                            talkId: newTalk.id,
+                            priority: 'HIGH',
                             linkUrl: `/drop/${drop.slug}`
+                          });
+
+                          // Rule 5: MENTION notification
+                          storage.handleMentionsInTalk({
+                            content: text,
+                            actorId: currentUser.id,
+                            actorName: currentUser.name,
+                            actorAvatar: isTalkAnon ? undefined : currentUser.avatar,
+                            isAnonymous: isTalkAnon,
+                            dropId: drop.id,
+                            dropSlug: drop.slug,
+                            dropPrompt: drop.prompt,
+                            responseId: response.id,
                           });
                         }
 
@@ -604,12 +738,17 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                     <input 
                       type="text" 
                       name="talk"
-                      placeholder={lang === 'id' ? 'Tulis obrolan...' : 'Add a talk...'}
-                      className="flex-1 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-[#12A889] dark:text-dark-text transition-all"
+                      disabled={isExpired}
+                      placeholder={isExpired ? (lang === 'id' ? 'Pertanyaan telah berakhir' : 'Question has expired') : (lang === 'id' ? 'Tulis obrolan... (@username untuk mention)' : 'Add a talk... (@username to mention)')}
+                      className="flex-1 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-[#12A889] dark:text-dark-text transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       autoComplete="off"
                     />
-                    <button type="submit" className="bg-[#12A889] text-white px-5 py-2.5 rounded-xl text-[13px] font-bold hover:bg-[#12A889] transition-colors shadow-md shadow-[#12A889]/20">
-                      Send
+                    <button 
+                      type="submit" 
+                      disabled={isExpired}
+                      className="bg-[#12A889] text-white px-5 py-2.5 rounded-xl text-[13px] font-bold hover:bg-[#12A889] transition-colors shadow-md shadow-[#12A889]/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {lang === 'id' ? 'Kirim' : 'Send'}
                     </button>
                   </form>
                 </div>
@@ -667,17 +806,19 @@ const RespondModal = ({ isOpen, onClose, drop, onSuccess }: { isOpen: boolean, o
 
     storage.saveResponse(newResponse);
 
-    // Dispatch notification
-    const actorDisplayName = isAnonymous ? (lang === 'id' ? 'Seseorang (Anonim)' : 'Someone (Anonymous)') : currentUser.name;
+    // Dispatch notification (Rule 1: JAWABAN)
+    const actorDisplayName = isAnonymous ? (lang === 'id' ? 'Seseorang' : 'Someone') : currentUser.name;
     storage.addNotification({
       userId: drop.ownerId,
       actorName: actorDisplayName,
       actorAvatar: isAnonymous ? undefined : (currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`),
       type: 'RESPONSE',
-      message: lang === 'id' ? 'menjawab pertanyaan kamu' : 'responded to your share',
+      message: lang === 'id' ? 'menjawab pertanyaanmu.' : 'answered your question.',
       dropId: drop.id,
       dropSlug: drop.slug,
       dropPrompt: drop.prompt,
+      responseId: newResponse.id,
+      priority: 'HIGH',
       linkUrl: `/drop/${drop.slug}`
     });
 

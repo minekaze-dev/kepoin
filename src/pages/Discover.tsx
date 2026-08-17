@@ -167,9 +167,9 @@ export const Discover = () => {
                   {t.create.types[drop.type.toUpperCase() as keyof typeof t.create.types] || drop.type}
                 </span>
                 <span className={`text-[11px] flex gap-1.5 items-center ${isTrendingCard ? 'text-orange-700/70 dark:text-orange-300/70 font-medium' : 'text-gray-400 dark:text-dark-muted'}`}>
-                  <span>{storage.getResponses(drop.id).length} {lang === 'id' ? 'jawaban' : 'answers'}</span>
+                  <span>{storage.getResponses(drop.id).length} {lang === 'en' ? (storage.getResponses(drop.id).length === 1 ? 'answer' : 'answers') : 'jawaban'}</span>
                   <span>·</span>
-                  <span>{getTotalTalks(drop.id)} {lang === 'id' ? 'obrolan' : 'talks'}</span>
+                  <span>{getTotalTalks(drop.id)} {lang === 'en' ? (getTotalTalks(drop.id) === 1 ? 'talk' : 'talks') : 'obrolan'}</span>
                 </span>
               </div>
               <h3 className={`
@@ -259,7 +259,7 @@ export const Discover = () => {
                     <img src={storage.getUserById(drop.ownerId)?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${drop.ownerId}`} alt="creator" />
                   </div>
                   <span className="text-[12px] font-medium text-gray-500 dark:text-dark-muted truncate max-w-[120px]">
-                    by {storage.getUserById(drop.ownerId)?.name || 'Someone'}
+                    {t.public.createdBy} {storage.getUserById(drop.ownerId)?.name || t.public.someone}
                   </span>
                 </div>
               </div>

@@ -57,6 +57,7 @@ const STORAGE_KEYS = {
   SAVED: 'dropboard_saved',
   USER: 'dropboard_user',
   REACTIONS: 'dropboard_user_reactions',
+  DROP_REACTIONS: 'dropboard_drop_reactions',
   LANG: 'kukepo_lang',
   NOTIFICATIONS: 'dropboard_notifications_v5',
   REGISTERED_USERS: 'dropboard_registered_users_v2',
@@ -465,19 +466,39 @@ export const storage = {
     return data ? JSON.parse(data) : {};
   },
 
+  getDropReactions: (): Record<string, string[]> => {
+    const data = localStorage.getItem(STORAGE_KEYS.DROP_REACTIONS);
+    return data ? JSON.parse(data) : {};
+  },
+
+  isDropExpired: (drop: DropBoard): boolean => {
+    if (drop.status === 'EXPIRED' || drop.status === 'CLOSED') return true;
+    if (drop.expiresAt && new Date(drop.expiresAt).getTime() <= Date.now()) return true;
+    return false;
+  },
+
   toggleReaction: (responseId: string, emoji: string) => {
+    if (!storage.getIsLoggedIn()) {
+      window.dispatchEvent(new Event('open-login-modal'));
+      return;
+    }
     const reactions = storage.getUserReactions();
     const responses = storage.getResponses();
     const response = responses.find(r => r.id === responseId);
     
     if (!response) return;
 
+    // Rule 9: disallow new reactions if drop is expired
+    const allDrops = storage.getDrops(true);
+    const drop = allDrops.find(d => d.id === response.dropId);
+    if (drop && storage.isDropExpired(drop)) return;
+
     if (!reactions[responseId]) {
       reactions[responseId] = [];
     }
 
     const emojiIndex = reactions[responseId].indexOf(emoji);
-    const reactionObj = response.reactions.find(re => re.emoji === emoji);
+    let reactionObj = response.reactions.find(re => re.emoji === emoji);
     const currentUserId = storage.getUser().id;
 
     if (emojiIndex === -1) {
@@ -485,14 +506,35 @@ export const storage = {
       reactions[responseId].push(emoji);
       if (reactionObj) {
         reactionObj.count++;
+        if (!reactionObj.userIds.includes(currentUserId)) {
+          reactionObj.userIds.push(currentUserId);
+        }
       } else {
         response.reactions.push({ emoji, count: 1, userIds: [currentUserId] });
+      }
+
+      // Rule 4 & 6: Reaction notification on answer
+      if (response.userId && drop) {
+        const currentUser = storage.getUser();
+        storage.addOrGroupReactionNotification({
+          recipientUserId: response.userId,
+          actorId: currentUser.id,
+          actorName: currentUser.name,
+          actorAvatar: currentUser.avatar,
+          emoji,
+          targetType: 'ANSWER',
+          dropId: drop.id,
+          dropSlug: drop.slug,
+          dropPrompt: drop.prompt,
+          responseId: response.id
+        });
       }
     } else {
       // Remove reaction
       reactions[responseId].splice(emojiIndex, 1);
       if (reactionObj) {
         reactionObj.count = Math.max(0, reactionObj.count - 1);
+        reactionObj.userIds = reactionObj.userIds.filter(id => id !== currentUserId);
       }
     }
 
@@ -505,7 +547,68 @@ export const storage = {
     window.dispatchEvent(new Event('storage'));
   },
 
-  getNotifications: (): AppNotification[] => {
+  toggleDropReaction: (dropId: string, emoji: string) => {
+    if (!storage.getIsLoggedIn()) {
+      window.dispatchEvent(new Event('open-login-modal'));
+      return;
+    }
+    const dropReactions = storage.getDropReactions();
+    const drops = storage.getDrops(true);
+    const drop = drops.find(d => d.id === dropId);
+    if (!drop) return;
+
+    // Rule 9: disallow new reactions if drop is expired
+    if (storage.isDropExpired(drop)) return;
+
+    const currentUserId = storage.getUser().id;
+    if (!dropReactions[dropId]) {
+      dropReactions[dropId] = [];
+    }
+
+    drop.reactions = drop.reactions || [];
+    const userEmojiIndex = dropReactions[dropId].indexOf(emoji);
+    let reactionObj = drop.reactions.find(r => r.emoji === emoji);
+
+    if (userEmojiIndex === -1) {
+      // Add reaction
+      dropReactions[dropId].push(emoji);
+      if (reactionObj) {
+        reactionObj.count++;
+        if (!reactionObj.userIds.includes(currentUserId)) {
+          reactionObj.userIds.push(currentUserId);
+        }
+      } else {
+        drop.reactions.push({ emoji, count: 1, userIds: [currentUserId] });
+      }
+
+      // Rule 3 & 6: Reaction notification on question
+      const currentUser = storage.getUser();
+      storage.addOrGroupReactionNotification({
+        recipientUserId: drop.ownerId,
+        actorId: currentUser.id,
+        actorName: currentUser.name,
+        actorAvatar: currentUser.avatar,
+        emoji,
+        targetType: 'DROP',
+        dropId: drop.id,
+        dropSlug: drop.slug,
+        dropPrompt: drop.prompt
+      });
+    } else {
+      // Remove reaction
+      dropReactions[dropId].splice(userEmojiIndex, 1);
+      if (reactionObj) {
+        reactionObj.count = Math.max(0, reactionObj.count - 1);
+        reactionObj.userIds = reactionObj.userIds.filter(id => id !== currentUserId);
+      }
+    }
+
+    localStorage.setItem(STORAGE_KEYS.DROP_REACTIONS, JSON.stringify(dropReactions));
+    storage.updateDrop(drop);
+    window.dispatchEvent(new Event('storage'));
+  },
+
+  getAllNotifications: (): AppNotification[] => {
     const data = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
     if (!data) {
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(initialNotifications));
@@ -518,16 +621,55 @@ export const storage = {
     }
   },
 
+  getNotifications: (targetUserId?: string): AppNotification[] => {
+    // Rule 16: Guest tidak memiliki notif personal
+    if (!storage.getIsLoggedIn()) {
+      return [];
+    }
+    const currentUserId = targetUserId || storage.getUser()?.id;
+    if (!currentUserId) return [];
+
+    // Trigger expiration alerts check once per read
+    storage.checkAndNotifyExpiringDrops();
+
+    const all = storage.getAllNotifications();
+    return all
+      .filter(n => n.userId === currentUserId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  },
+
   addNotification: (notification: Omit<AppNotification, 'id' | 'createdAt' | 'read'>) => {
-    const notifications = storage.getNotifications();
+    const currentUserId = storage.getUser()?.id;
+
+    // Rule 7: Jangan notifikasi aksi sendiri (kecuali info sistem / expiration)
+    const isSystemInfo = notification.type === 'EXPIRED' || notification.type === 'EXPIRING_1H' || notification.type === 'EXPIRING_12H';
+    if (!isSystemInfo && notification.userId === currentUserId) {
+      return null;
+    }
+
+    // Determine priority if not specified (Rule 15)
+    let priority = notification.priority;
+    if (!priority) {
+      if (notification.type === 'ANSWER' || notification.type === 'TALK' || notification.type === 'MENTION' || notification.type === 'RESPONSE' || notification.type === 'COMMENT') {
+        priority = 'HIGH';
+      } else if (notification.type === 'REACTION' || notification.type === 'REACTION_DROP' || notification.type === 'REACTION_ANSWER') {
+        priority = 'MEDIUM';
+      } else {
+        priority = 'INFO';
+      }
+    }
+
+    const allNotifs = storage.getAllNotifications();
     const newNotif: AppNotification = {
       ...notification,
+      priority,
       id: 'notif_' + Math.random().toString(36).substr(2, 9),
       createdAt: new Date().toISOString(),
       read: false,
     };
-    notifications.unshift(newNotif);
-    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+
+    allNotifs.unshift(newNotif);
+    localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
 
     // Sync to Supabase
     insertNotificationToSupabase(newNotif);
@@ -537,34 +679,258 @@ export const storage = {
     return newNotif;
   },
 
+  addOrGroupReactionNotification: ({
+    recipientUserId,
+    actorId,
+    actorName,
+    actorAvatar,
+    isAnonymous,
+    emoji,
+    targetType,
+    dropId,
+    dropSlug,
+    dropPrompt,
+    responseId
+  }: {
+    recipientUserId: string;
+    actorId?: string;
+    actorName: string;
+    actorAvatar?: string;
+    isAnonymous?: boolean;
+    emoji: string;
+    targetType: 'DROP' | 'ANSWER';
+    dropId: string;
+    dropSlug: string;
+    dropPrompt: string;
+    responseId?: string;
+  }) => {
+    // Rule 3, 4, 7: Do not notify if reacting to own question or answer
+    if (recipientUserId === actorId) {
+      return;
+    }
+
+    // Rule 9: Check if drop is expired
+    const allDrops = storage.getDrops(true);
+    const drop = allDrops.find(d => d.id === dropId);
+    if (drop && storage.isDropExpired(drop)) {
+      return;
+    }
+
+    const allNotifs = storage.getAllNotifications();
+    const targetTypeName = targetType === 'DROP' ? 'pertanyaanmu' : 'jawabanmu';
+    const notifType = targetType === 'DROP' ? 'REACTION_DROP' : 'REACTION_ANSWER';
+
+    // Find if there's an existing unread reaction notification for this target and emoji
+    const existing = allNotifs.find(n =>
+      n.userId === recipientUserId &&
+      !n.read &&
+      n.dropId === dropId &&
+      (targetType === 'ANSWER' ? n.responseId === responseId : true) &&
+      (n.type === notifType || n.type === 'REACTION') &&
+      n.emoji === emoji
+    );
+
+    if (existing) {
+      // Grouping (Rule 6: "Raka dan 3 lainnya memberi ❤️ pada pertanyaanmu.")
+      const newCount = (existing.actorCount || 1) + 1;
+      existing.actorCount = newCount;
+      const initialActor = existing.actorName || (isAnonymous ? 'Seseorang' : actorName);
+      existing.message = `${initialActor} dan ${newCount - 1} lainnya memberi ${emoji} pada ${targetTypeName}.`;
+      existing.createdAt = new Date().toISOString(); // Move to top
+      
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('notification-updated'));
+    } else {
+      // Single person notification
+      const displayName = isAnonymous ? 'Seseorang' : actorName;
+      const newNotif: AppNotification = {
+        id: 'notif_' + Math.random().toString(36).substr(2, 9),
+        userId: recipientUserId,
+        actorName: displayName,
+        actorAvatar: isAnonymous ? undefined : actorAvatar,
+        type: notifType,
+        priority: 'MEDIUM',
+        emoji,
+        actorCount: 1,
+        message: `${displayName} memberi ${emoji} pada ${targetTypeName}.`,
+        dropId,
+        dropSlug,
+        dropPrompt,
+        responseId,
+        createdAt: new Date().toISOString(),
+        read: false,
+        linkUrl: targetType === 'DROP' ? `/drop/${dropSlug}` : `/drop/${dropSlug}#response-${responseId}`
+      };
+
+      allNotifs.unshift(newNotif);
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
+      insertNotificationToSupabase(newNotif);
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('notification-updated'));
+    }
+  },
+
+  handleMentionsInTalk: ({
+    content,
+    actorId,
+    actorName,
+    actorAvatar,
+    isAnonymous,
+    dropId,
+    dropSlug,
+    dropPrompt,
+    responseId,
+  }: {
+    content: string;
+    actorId: string;
+    actorName: string;
+    actorAvatar?: string;
+    isAnonymous?: boolean;
+    dropId: string;
+    dropSlug: string;
+    dropPrompt: string;
+    responseId?: string;
+  }) => {
+    // Extract @mentions (Rule 5)
+    const matches = content.match(/@([a-zA-Z0-9_\.]+)/g);
+    if (!matches || matches.length === 0) return;
+
+    const allUsers = storage.getAllUsers();
+    const processedUserIds = new Set<string>();
+
+    for (const match of matches) {
+      const usernameClean = storage.normalizeUsername(match);
+      const targetUser = allUsers.find(u => storage.normalizeUsername(u.username) === usernameClean);
+
+      // Rule 5: User yang disebut mendapat notifikasi. Jangan membuat notif jika user menyebut dirinya sendiri.
+      if (targetUser && targetUser.id !== actorId && !processedUserIds.has(targetUser.id)) {
+        processedUserIds.add(targetUser.id);
+        const displayName = isAnonymous ? 'Seseorang' : actorName;
+
+        storage.addNotification({
+          userId: targetUser.id,
+          actorName: displayName,
+          actorAvatar: isAnonymous ? undefined : actorAvatar,
+          type: 'MENTION',
+          priority: 'HIGH',
+          message: `${displayName} menyebutmu di sebuah obrolan.`,
+          dropId,
+          dropSlug,
+          dropPrompt,
+          responseId,
+          linkUrl: `/drop/${dropSlug}#talks`
+        });
+      }
+    }
+  },
+
+  checkAndNotifyExpiringDrops: () => {
+    if (!storage.getIsLoggedIn()) return;
+    const currentUser = storage.getUser();
+    if (!currentUser?.id) return;
+
+    const allDrops = storage.getDrops(true);
+    const userDrops = allDrops.filter(d => d.ownerId === currentUser.id);
+    const now = Date.now();
+
+    userDrops.forEach(drop => {
+      if (!drop.expiresAt) return;
+      const expiresAtMs = new Date(drop.expiresAt).getTime();
+      const timeLeft = expiresAtMs - now;
+
+      // 1. Expired case
+      if (timeLeft <= 0) {
+        if (drop.status !== 'EXPIRED') {
+          drop.status = 'EXPIRED';
+          storage.updateDrop(drop);
+        }
+        const key = `notif_exp_done_${drop.id}`;
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, 'true');
+          storage.addNotification({
+            userId: currentUser.id,
+            actorName: 'Kepoin',
+            type: 'EXPIRED',
+            priority: 'INFO',
+            message: 'Pertanyaanmu sudah berakhir.',
+            dropId: drop.id,
+            dropSlug: drop.slug,
+            dropPrompt: drop.prompt,
+            linkUrl: `/drop/${drop.slug}`
+          });
+        }
+      }
+      // 2. 1 Hour before expiration (<= 1h and > 0)
+      else if (timeLeft <= 3600 * 1000) {
+        const key = `notif_exp_1h_${drop.id}`;
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, 'true');
+          storage.addNotification({
+            userId: currentUser.id,
+            actorName: 'Kepoin',
+            type: 'EXPIRING_1H',
+            priority: 'INFO',
+            message: 'Pertanyaanmu akan berakhir dalam 1 jam.',
+            dropId: drop.id,
+            dropSlug: drop.slug,
+            dropPrompt: drop.prompt,
+            linkUrl: `/drop/${drop.slug}`
+          });
+        }
+      }
+      // 3. 12 Hours before expiration (<= 12h and > 1h)
+      else if (timeLeft <= 12 * 3600 * 1000) {
+        const key = `notif_exp_12h_${drop.id}`;
+        if (!localStorage.getItem(key)) {
+          localStorage.setItem(key, 'true');
+          storage.addNotification({
+            userId: currentUser.id,
+            actorName: 'Kepoin',
+            type: 'EXPIRING_12H',
+            priority: 'INFO',
+            message: 'Pertanyaanmu akan berakhir dalam 12 jam.',
+            dropId: drop.id,
+            dropSlug: drop.slug,
+            dropPrompt: drop.prompt,
+            linkUrl: `/drop/${drop.slug}`
+          });
+        }
+      }
+    });
+  },
+
   markNotificationAsRead: (notificationId: string) => {
-    const notifications = storage.getNotifications();
-    const notif = notifications.find(n => n.id === notificationId);
+    const allNotifs = storage.getAllNotifications();
+    const notif = allNotifs.find(n => n.id === notificationId);
     if (notif && !notif.read) {
       notif.read = true;
-      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('notification-updated'));
     }
   },
 
   markAllNotificationsAsRead: () => {
-    const notifications = storage.getNotifications();
+    const currentUserId = storage.getUser()?.id;
+    if (!currentUserId) return;
+    const allNotifs = storage.getAllNotifications();
     let updated = false;
-    notifications.forEach(n => {
-      if (!n.read) {
+    allNotifs.forEach(n => {
+      if (n.userId === currentUserId && !n.read) {
         n.read = true;
         updated = true;
       }
     });
     if (updated) {
-      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('notification-updated'));
     }
   },
 
   getUnreadNotificationsCount: (): number => {
+    if (!storage.getIsLoggedIn()) return 0;
     const notifications = storage.getNotifications();
     return notifications.filter(n => !n.read).length;
   },
@@ -574,7 +940,12 @@ export const storage = {
    * ======================================================== */
   getIsAdmin: (): boolean => {
     const data = localStorage.getItem(STORAGE_KEYS.IS_ADMIN);
-    return data !== null ? JSON.parse(data) : false;
+    if (data !== null && JSON.parse(data) === true) return true;
+    const user = storage.getUser();
+    if (user && (user.role === 'ADMIN' || user.username?.toLowerCase() === '@admin' || user.username?.toLowerCase() === 'admin' || user.email?.toLowerCase() === 'admin@kepoin.app')) {
+      return true;
+    }
+    return false;
   },
 
   setIsAdmin: (val: boolean) => {

@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { storage } from '../lib/storage';
 import { supabase } from '../lib/supabase';
 import { X, Eye, EyeOff, CheckCircle2, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
@@ -274,9 +275,9 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border w-full max-w-sm sm:max-w-[400px] rounded-2xl p-5 shadow-2xl space-y-3.5 relative">
+  const modalContent = (
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[99999] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border w-full max-w-sm sm:max-w-[400px] max-h-[90vh] overflow-y-auto rounded-2xl p-5 shadow-2xl space-y-3.5 relative">
         <button 
           onClick={onClose}
           className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-dark-text p-1 rounded-full hover:bg-gray-100 dark:hover:bg-dark-border transition-colors cursor-pointer"
@@ -604,4 +605,6 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 };

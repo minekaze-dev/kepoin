@@ -50,11 +50,11 @@ export const Saved = () => {
                 {drop.prompt}
               </h3>
               <p className="text-[12px] text-gray-400 dark:text-dark-muted flex gap-1.5 items-center">
-                <span>{storage.getResponses(drop.id).length} drops</span>
+                <span>{storage.getResponses(drop.id).length} {lang === 'en' ? (storage.getResponses(drop.id).length === 1 ? 'answer' : 'answers') : 'jawaban'}</span>
                 {getTotalTalks(drop.id) > 0 && (
                   <>
                     <span>•</span>
-                    <span>{getTotalTalks(drop.id)} {lang === 'id' ? 'obrolan' : 'talks'}</span>
+                    <span>{getTotalTalks(drop.id)} {lang === 'en' ? (getTotalTalks(drop.id) === 1 ? 'talk' : 'talks') : 'obrolan'}</span>
                   </>
                 )}
                 <span>•</span>
