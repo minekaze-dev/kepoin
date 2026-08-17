@@ -18,11 +18,13 @@ import {
   Moon,
   Globe,
   ChevronLeft,
-  LogOut
+  LogOut,
+  Flag
 } from 'lucide-react';
 import { storage } from '../lib/storage';
 import { useLanguage } from '../lib/i18n';
 import { useTheme } from '../lib/theme';
+import { ReportModal } from './ReportModal';
 
 interface SidebarItemProps {
   to: string;
@@ -152,6 +154,68 @@ export const Sidebar = () => {
 
       <div className="flex-1" />
 
+      {!isLoggedIn && (
+        <div className="mt-auto pt-3 relative z-10 space-y-2.5 border-t border-gray-100 dark:border-dark-border px-1">
+          {/* Theme & Language Toggles */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border/80 border border-gray-200/70 dark:border-dark-border rounded-lg text-xs font-semibold text-gray-700 dark:text-dark-text transition-colors cursor-pointer"
+              title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+            >
+              {theme === 'dark' ? (
+                <Sun size={14} className="text-amber-400" />
+              ) : (
+                <Moon size={14} className="text-gray-600 dark:text-dark-muted" />
+              )}
+              <span className="text-[11px]">
+                {theme === 'dark' ? (lang === 'id' ? 'Terang' : 'Light') : (lang === 'id' ? 'Gelap' : 'Dark')}
+              </span>
+            </button>
+
+            <button
+              onClick={toggleLang}
+              className="flex items-center justify-center gap-1.5 py-1.5 px-2 bg-gray-50 hover:bg-gray-100 dark:bg-dark-bg dark:hover:bg-dark-border/80 border border-gray-200/70 dark:border-dark-border rounded-lg text-xs font-semibold text-gray-700 dark:text-dark-text transition-colors cursor-pointer"
+              title="Ganti Bahasa / Change Language"
+            >
+              <Globe size={14} className="text-[#12A889]" />
+              <span className="text-[11px] font-bold uppercase">{lang === 'id' ? 'ID' : 'EN'}</span>
+            </button>
+          </div>
+
+          {/* Report a Problem */}
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-gray-500 hover:text-red-500 dark:text-dark-muted dark:hover:text-red-400 transition-colors cursor-pointer"
+          >
+            <Flag size={12} />
+            <span>{lang === 'id' ? 'Laporkan Masalah' : 'Report a Problem'}</span>
+          </button>
+
+          {/* Terms & Privacy Links & Copyright */}
+          <div className="text-center space-y-1 pt-0.5">
+            <div className="flex items-center justify-center gap-2 text-[10.5px] text-gray-400 dark:text-dark-muted font-medium">
+              <Link 
+                to="/terms" 
+                className="hover:text-gray-700 dark:hover:text-dark-text hover:underline transition-colors"
+              >
+                {lang === 'id' ? 'Ketentuan' : 'Terms'}
+              </Link>
+              <span>•</span>
+              <Link 
+                to="/privacy" 
+                className="hover:text-gray-700 dark:hover:text-dark-text hover:underline transition-colors"
+              >
+                {lang === 'id' ? 'Privasi' : 'Privacy'}
+              </Link>
+            </div>
+            <p className="text-[10px] text-gray-400 dark:text-dark-muted">
+              © 2026 Kepoin
+            </p>
+          </div>
+        </div>
+      )}
+
       {isLoggedIn && (
         <div className={`mt-2 pt-4 relative z-10 bg-white dark:bg-dark-surface space-y-2 border-t border-gray-100 dark:border-dark-border ${isCollapsedActual ? 'flex flex-col items-center w-full' : 'px-2'}`}>
           <div className={`flex items-center ${isCollapsedActual ? 'justify-center' : 'gap-3 px-2 py-1.5'}`}>
@@ -176,6 +240,15 @@ export const Sidebar = () => {
           </button>
         </div>
       )}
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType="USER"
+        targetId="guest_feedback"
+        targetTitle="Kepoin Platform Feedback / Problem"
+      />
     </aside>
   );
 };

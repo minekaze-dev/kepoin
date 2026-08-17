@@ -147,7 +147,11 @@ export const storage = {
   },
 
   getLang: (): Language => {
-    return (localStorage.getItem(STORAGE_KEYS.LANG) as Language) || 'id';
+    const val = localStorage.getItem(STORAGE_KEYS.LANG);
+    if (val === 'en' || val === 'id' || val === 'slank') {
+      return val;
+    }
+    return 'id';
   },
 
   setLang: (lang: Language) => {

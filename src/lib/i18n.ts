@@ -8,22 +8,38 @@ import { storage } from './storage';
 import { translations, Language } from './translations';
 
 export function useLanguage() {
-  const [lang, setLang] = useState<Language>(storage.getLang());
+  const [lang, setLangState] = useState<Language>(() => {
+    const saved = storage.getLang();
+    return (saved && translations[saved]) ? saved : 'id';
+  });
 
   useEffect(() => {
     const handleStorage = () => {
-      setLang(storage.getLang());
+      const current = storage.getLang();
+      setLangState((current && translations[current]) ? current : 'id');
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const t = translations[lang];
+  const safeLang = (lang && translations[lang]) ? lang : 'id';
+  const t = translations[safeLang] || translations.id || translations.en;
 
-  const toggleLang = (newLang: Language) => {
-    storage.setLang(newLang);
-    setLang(newLang);
+  const setLang = (newLang: Language) => {
+    const target = translations[newLang] ? newLang : 'id';
+    storage.setLang(target);
+    setLangState(target);
   };
 
-  return { lang, t, toggleLang };
+  const toggleLang = (newLang?: Language) => {
+    if (newLang && translations[newLang]) {
+      setLang(newLang);
+    } else {
+      // Toggle between id and en
+      const next = safeLang === 'id' ? 'en' : 'id';
+      setLang(next);
+    }
+  };
+
+  return { lang: safeLang, t, setLang, toggleLang };
 }
