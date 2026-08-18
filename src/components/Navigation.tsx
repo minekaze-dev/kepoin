@@ -88,7 +88,7 @@ export const Sidebar = () => {
             to="/" 
             onClick={(e) => { if (!isLoggedIn) { e.preventDefault(); window.dispatchEvent(new Event('open-login-modal')); } }}
           >
-            <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-28 h-auto object-contain" />
+            <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-36 h-auto object-contain" />
           </Link>
         )}
         {isLoggedIn && (
