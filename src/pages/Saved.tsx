@@ -73,7 +73,7 @@ export const Saved = () => {
           </div>
           <Link 
             to="/create"
-            className="flex items-center gap-2 bg-[#12A889] hover:bg-[#12A889] text-white px-6 py-2.5 rounded-xl text-[14px] font-bold transition-all shadow-md shadow-[#12A889]/20"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#12A889] to-blue-600 hover:opacity-95 text-white px-6 py-2.5 rounded-xl text-[14px] font-bold transition-all shadow-md shadow-[#12A889]/20"
           >
             <PlusCircle size={18} />
             {t.saved.createBtn}

@@ -42,7 +42,7 @@ export const MyResults = () => {
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-6 py-1.5 rounded-lg text-[13px] font-bold transition-all ${activeTab === tab ? 'bg-[#12A889] text-white shadow-md shadow-[#12A889]/20' : 'text-gray-500 dark:text-dark-muted hover:bg-gray-50 dark:hover:bg-dark-bg'}`}
+            className={`px-6 py-1.5 rounded-lg text-[13px] font-bold transition-all ${activeTab === tab ? 'bg-gradient-to-r from-[#12A889] to-blue-600 text-white shadow-md shadow-[#12A889]/20' : 'text-gray-500 dark:text-dark-muted hover:bg-gray-50 dark:hover:bg-dark-bg'}`}
           >
             {tab}
           </button>
@@ -76,7 +76,7 @@ export const MyResults = () => {
               <Link to={`/drop/${drop.slug}`} className="bg-gray-50 dark:bg-dark-bg hover:bg-gray-100 dark:hover:bg-dark-border p-2 rounded-lg text-gray-600 dark:text-dark-text transition-colors">
                 <ExternalLink size={18} />
               </Link>
-              <Link to={`/drop/${drop.slug}/results`} className="flex items-center gap-2 bg-charcoal dark:bg-[#12A889] text-white px-4 py-2 rounded-lg text-[13px] font-bold transition-all">
+              <Link to={`/drop/${drop.slug}/results`} className="flex items-center gap-2 bg-gradient-to-r from-[#12A889] to-blue-600 hover:opacity-95 text-white px-4 py-2 rounded-lg text-[13px] font-bold transition-all">
                 <BarChart2 size={16} />
                 {t.public.results}
               </Link>

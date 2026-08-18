@@ -391,7 +391,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#12A889] hover:bg-[#12A889] text-white font-bold py-2.5 rounded-xl transition-all shadow-sm text-[14px] cursor-pointer mt-1 flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full bg-gradient-to-r from-[#12A889] to-blue-600 hover:opacity-95 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm text-[14px] cursor-pointer mt-1 flex items-center justify-center gap-2 disabled:opacity-70"
             >
               {isLoading && <Loader2 size={16} className="animate-spin" />}
               <span>{isLoading ? 'Memproses...' : t.loginModal.loginBtn}</span>
@@ -519,7 +519,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
             <button 
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#12A889] hover:bg-[#12A889] text-white font-bold py-2.5 rounded-xl transition-all shadow-sm text-[14px] cursor-pointer mt-1 flex items-center justify-center gap-2 disabled:opacity-70"
+              className="w-full bg-gradient-to-r from-[#12A889] to-blue-600 hover:opacity-95 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm text-[14px] cursor-pointer mt-1 flex items-center justify-center gap-2 disabled:opacity-70"
             >
               {isLoading && <Loader2 size={16} className="animate-spin" />}
               <span>{isLoading ? 'Mendaftarkan...' : t.loginModal.registerBtn}</span>
@@ -583,7 +583,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
                 <button 
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#12A889] hover:bg-[#12A889] text-white font-bold py-2.5 rounded-xl transition-all shadow-sm text-[13px] cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full bg-gradient-to-r from-[#12A889] to-blue-600 hover:opacity-95 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm text-[13px] cursor-pointer flex items-center justify-center gap-2"
                 >
                   {isLoading && <Loader2 size={16} className="animate-spin" />}
                   <span>{isLoading ? 'Mengirim...' : t.loginModal.sendResetBtn}</span>

@@ -423,7 +423,7 @@ export const Home = () => {
 
               <button 
                 onClick={handleQuickCreate}
-                className="bg-charcoal dark:bg-[#12A889] text-white px-6 py-2 rounded-full text-[13px] font-bold hover:bg-black dark:hover:bg-orange-700 transition-colors whitespace-nowrap shadow-sm flex items-center gap-2"
+                className="bg-gradient-to-r from-[#12A889] to-blue-600 text-white px-6 py-2 rounded-full text-[13px] font-bold hover:opacity-95 transition-all whitespace-nowrap shadow-sm flex items-center gap-2"
               >
                 {t.home.createBtn}
               </button>
@@ -538,7 +538,7 @@ export const Home = () => {
                 onClick={() => setTrendingTab('newest')}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
                   trendingTab === 'newest'
-                    ? 'bg-[#12A889] text-white shadow-sm'
+                    ? 'bg-gradient-to-r from-[#12A889] to-blue-600 text-white shadow-sm'
                     : 'bg-gray-100 dark:bg-dark-surface text-gray-600 dark:text-dark-muted hover:text-gray-900 dark:hover:text-dark-text'
                 }`}
               >
@@ -549,7 +549,7 @@ export const Home = () => {
                   onClick={() => setTrendingTab('trending')}
                   className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
                     trendingTab === 'trending'
-                      ? 'bg-[#12A889] text-white shadow-sm'
+                      ? 'bg-gradient-to-r from-[#12A889] to-blue-600 text-white shadow-sm'
                       : 'bg-gray-100 dark:bg-dark-surface text-gray-600 dark:text-dark-muted hover:text-gray-900 dark:hover:text-dark-text'
                   }`}
                 >
@@ -754,7 +754,7 @@ export const Home = () => {
         {storage.getIsLoggedIn() && (
           <>
             {/* Widget 1: This or That */}
-            <div className="bg-[#12A889] rounded-xl p-5 shadow-lg relative overflow-hidden text-white animate-pulse-slow">
+            <div className="bg-gradient-to-br from-[#12A889] to-blue-600 rounded-xl p-5 shadow-lg relative overflow-hidden text-white">
               <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none animate-spin-slow" />
               <div className="flex items-center gap-2 mb-3 relative z-10">
                 <span className="text-[14px]">💡</span>

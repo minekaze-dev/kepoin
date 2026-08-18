@@ -31,7 +31,7 @@ export const AnnouncementBanner: React.FC = () => {
   };
 
   return (
-    <div className="mb-6 bg-gradient-to-r from-[#12A889] via-emerald-600 to-[#12A889] rounded-3xl p-5 text-white shadow-xl shadow-[#12A889]/15 relative overflow-hidden flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
+    <div className="mb-6 bg-gradient-to-r from-[#12A889] via-teal-600 to-blue-600 rounded-3xl p-5 text-white shadow-xl shadow-[#12A889]/15 relative overflow-hidden flex items-center justify-between gap-4 animate-in fade-in slide-in-from-top-3 duration-300">
       <div className="absolute -right-10 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl pointer-events-none" />
       
       <div className="min-w-0 pr-2">

@@ -117,7 +117,7 @@ export const Sidebar = () => {
         >
           <NavLink
             to={isLoggedIn ? "/create" : "#"}
-            className={`flex items-center ${isCollapsedActual ? 'justify-center w-10 h-10 rounded-full' : 'gap-3 px-4 rounded-xl flex-1 justify-start'} bg-[#12A889] hover:bg-[#12A889]/90 text-white py-2.5 transition-all z-10 font-bold shadow-md shadow-[#12A889]/20 text-[14px] mt-1 mb-2`}
+            className={`flex items-center ${isCollapsedActual ? 'justify-center w-10 h-10 rounded-full' : 'gap-3 px-4 rounded-xl flex-1 justify-start'} bg-gradient-to-r from-[#12A889] to-blue-600 hover:opacity-95 text-white py-2.5 transition-all z-10 font-bold shadow-md shadow-[#12A889]/20 text-[14px] mt-1 mb-2`}
           >
             <Plus size={isCollapsedActual ? 20 : 18} strokeWidth={3} />
             {!isCollapsedActual && <span>{t.nav.create}</span>}
@@ -343,7 +343,7 @@ export const MobileNav = () => {
           to={isLoggedIn ? "/create" : "#"} 
           onClick={handleCreateClick}
           className={({ isActive }) => `
-            w-12 h-12 rounded-full bg-[#12A889] hover:bg-[#12A889]/90 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-[#12A889]/35 border-2 border-white dark:border-dark-surface transition-all
+            w-12 h-12 rounded-full bg-gradient-to-tr from-[#12A889] to-blue-600 hover:opacity-95 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-[#12A889]/35 border-2 border-white dark:border-dark-surface transition-all
             ${isActive ? 'ring-2 ring-[#12A889]/40 ring-offset-2 dark:ring-offset-dark-surface' : ''}
           `}
           aria-label={t.nav.create}
