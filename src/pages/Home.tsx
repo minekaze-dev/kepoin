@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Plus, TrendingUp, ChevronRight, ChevronUp, ChevronDown, MoreVertical, Image, Trash2, Bookmark, User } from 'lucide-react';
+import { Plus, TrendingUp, ChevronRight, MoreVertical, Image, Trash2, Bookmark, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { storage } from '../lib/storage';
 import { DropBoard, ResponseType } from '../types';
@@ -581,13 +581,11 @@ export const Home = () => {
 
               return (
                 <div key={drop.id} className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 hover:shadow-md transition-shadow relative group overflow-hidden">
-                  {/* Left: Vote / Rank block */}
-                  <div className="flex flex-row sm:flex-col items-center justify-center gap-1 sm:gap-0 min-w-[40px] shrink-0 text-gray-400">
-                    <ChevronUp className="w-5 h-5 sm:w-6 sm:h-6 hover:text-[#12A889] cursor-pointer text-[#12A889]" />
-                    <span className="font-extrabold text-[13px] sm:text-[15px] text-gray-900 dark:text-white">
-                      {responses.length >= 1000 ? (responses.length/1000).toFixed(1) + 'K' : responses.length}
+                  {/* Left: Category Badge */}
+                  <div className="flex items-center shrink-0">
+                    <span className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[11px] sm:text-[12px] font-bold bg-[#12A889]/10 text-[#12A889] border border-[#12A889]/20 shadow-xs">
+                      {getCategoryLabel(drop.type)}
                     </span>
-                    <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 hover:text-[#12A889] cursor-pointer" />
                   </div>
 
                   {/* Middle: Info */}
@@ -608,9 +606,6 @@ export const Home = () => {
                         <span className="shrink-0">{timeString}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-bold bg-gray-100 dark:bg-dark-bg text-gray-600 dark:text-dark-text border border-gray-200 dark:border-dark-border">
-                          {getCategoryLabel(drop.type)}
-                        </span>
                         <span className="text-[10px] sm:text-[11px] font-bold text-[#12A889]">
                           {timeLeftString}
                         </span>
@@ -883,39 +878,58 @@ export const Home = () => {
         )}
 
         {/* Widget 3: Orang Lagi Kepo */}
-        <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-dark-muted">
-              {lang === 'en' ? '👀 PEOPLE ARE CURIOUS' : (lang === 'slank' ? '👀 PADA LAGI KEPO' : '👀 ORANG LAGI KEPO')}
-            </h3>
-          </div>
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
-                <span className="text-[16px]">📸</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">38</strong> {lang === 'en' ? 'viewing Photos' : (lang === 'slank' ? 'lagi liat Foto' : 'sedang lihat Foto')}</span>
+        {(() => {
+          const allDropsForKepo = storage.getDrops(true, false);
+          const photoDrops = allDropsForKepo.filter(d => d.type === 'PHOTO');
+          const songDrops = allDropsForKepo.filter(d => d.type === 'SONG');
+          const numberDrops = allDropsForKepo.filter(d => d.type === 'NUMBER');
+
+          const photoResponses = photoDrops.reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
+          const songResponses = songDrops.reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
+          const numberResponses = numberDrops.reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
+          const totalTalksAll = allDropsForKepo.reduce((acc, d) => acc + getTotalTalks(d.id), 0);
+
+          const activePhoto = 18 + photoDrops.length * 4 + photoResponses * 2;
+          const activeSong = 14 + songDrops.length * 4 + songResponses * 2;
+          const activeNumber = 11 + numberDrops.length * 4 + numberResponses * 2;
+          const activeTalks = 25 + totalTalksAll * 3;
+
+          return (
+            <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
+              <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-500 dark:text-dark-muted">
+                  {lang === 'en' ? '👀 PEOPLE ARE CURIOUS' : (lang === 'slank' ? '👀 PADA LAGI KEPO' : '👀 ORANG LAGI KEPO')}
+                </h3>
+              </div>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
+                    <span className="text-[16px]">📸</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activePhoto}</strong> {lang === 'en' ? 'viewing Photos' : (lang === 'slank' ? 'lagi liat Foto' : 'sedang lihat Foto')}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
+                    <span className="text-[16px]">🎵</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activeSong}</strong> {lang === 'en' ? 'searching Songs' : (lang === 'slank' ? 'lagi cari Lagu' : 'sedang cari Lagu')}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
+                    <span className="text-[16px]">🔢</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activeNumber}</strong> {lang === 'en' ? 'answering Numbers' : (lang === 'slank' ? 'lagi jawab Angka' : 'sedang jawab Angka')}</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between group">
+                  <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
+                    <span className="text-[16px]">💬</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activeTalks}</strong> {lang === 'en' ? 'chatting in talks' : (lang === 'slank' ? 'lagi ngobrol' : 'sedang ngobrol')}</span>
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
-                <span className="text-[16px]">🎵</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">27</strong> {lang === 'en' ? 'searching Songs' : (lang === 'slank' ? 'lagi cari Lagu' : 'sedang cari Lagu')}</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
-                <span className="text-[16px]">🔢</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">19</strong> {lang === 'en' ? 'answering Numbers' : (lang === 'slank' ? 'lagi jawab Angka' : 'sedang jawab Angka')}</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between group">
-              <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
-                <span className="text-[16px]">💬</span>
-                <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">42</strong> {lang === 'en' ? 'chatting in talks' : (lang === 'slank' ? 'lagi ngobrol' : 'sedang ngobrol')}</span>
-              </div>
-            </div>
-          </div>
-        </div>
+          );
+        })()}
 
 
       </div>
