@@ -4,28 +4,41 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, TrendingUp, ChevronRight, ChevronUp, ChevronDown, MoreVertical, Image, Trash2, Bookmark, User, Globe, Moon, Sun } from 'lucide-react';
+import { Plus, TrendingUp, ChevronRight, ChevronUp, ChevronDown, MoreVertical, Image, Trash2, Bookmark, User } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { storage } from '../lib/storage';
 import { DropBoard, ResponseType } from '../types';
 import { motion } from 'motion/react';
-import { NotificationBell } from '../components/NotificationBell';
 import { AnnouncementBanner } from '../components/AnnouncementBanner';
+import { Header } from '../components/Header';
 
 import { useLanguage } from '../lib/i18n';
-import { useTheme } from '../lib/theme';
 
 export const Home = () => {
-  const { t, lang, toggleLang, formatRelativeTime, formatTimeLeft, getCategoryLabel, getAnswerCountLabel, getTalkCountLabel } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { t, lang, formatRelativeTime, formatTimeLeft, getCategoryLabel, getAnswerCountLabel, getTalkCountLabel } = useLanguage();
   const navigate = useNavigate();
   
   // Daily Vote state
   const [dailyItem, setDailyItem] = useState(() => storage.getDailyThisOrThat());
-  const [votedOption, setVotedOption] = useState<string | null>(() => localStorage.getItem(`daily_vote_${dailyItem.id}`));
+  const [votedOption, setVotedOption] = useState<string | null>(() => {
+    const localVote = localStorage.getItem(`daily_vote_${dailyItem.id}`);
+    if (localVote) return localVote;
+    
+    // Check if user ID is in votedUserIds
+    if (storage.getIsLoggedIn()) {
+      const user = storage.getUser();
+      if (dailyItem.votedUserIds?.includes(user.id)) {
+        // We don't know which one they voted for from just the ID list if we don't store it, 
+        // but for now let's assume they can see results if they are in the list.
+        // Actually, let's just stick to localStorage for "which" option, but use ID for server-side validation if needed.
+        return 'voted'; 
+      }
+    }
+    return null;
+  });
   const [voteCounts, setVoteCounts] = useState({ 
-    a: parseInt(localStorage.getItem(`vote_a_${dailyItem.id}`) || '1243', 10), 
-    b: parseInt(localStorage.getItem(`vote_b_${dailyItem.id}`) || '842', 10) 
+    a: dailyItem.votesA || 0, 
+    b: dailyItem.votesB || 0 
   });
 
   useEffect(() => {
@@ -34,8 +47,8 @@ export const Home = () => {
       setDailyItem(updated);
       setVotedOption(localStorage.getItem(`daily_vote_${updated.id}`));
       setVoteCounts({
-        a: parseInt(localStorage.getItem(`vote_a_${updated.id}`) || '1243', 10),
-        b: parseInt(localStorage.getItem(`vote_b_${updated.id}`) || '842', 10)
+        a: updated.votesA || 0,
+        b: updated.votesB || 0
       });
     };
     window.addEventListener('storage', handleStorageUpdate);
@@ -43,18 +56,45 @@ export const Home = () => {
   }, []);
 
   const handleVote = (option: 'a' | 'b') => {
-    if (votedOption) return;
+    if (!storage.getIsLoggedIn()) {
+      window.dispatchEvent(new Event('open-login-modal'));
+      return;
+    }
+
+    const currentVote = localStorage.getItem(`daily_vote_${dailyItem.id}`);
+    if (currentVote === option) return; // No change
+
+    const user = storage.getUser();
+    const updatedItem = { ...dailyItem };
+    
+    // If they already voted for something else, remove that vote first
+    if (currentVote === 'a') {
+      updatedItem.votesA = Math.max(0, (updatedItem.votesA || 0) - 1);
+    } else if (currentVote === 'b') {
+      updatedItem.votesB = Math.max(0, (updatedItem.votesB || 0) - 1);
+    }
+
+    // Add new vote
+    if (option === 'a') {
+      updatedItem.votesA = (updatedItem.votesA || 0) + 1;
+    } else {
+      updatedItem.votesB = (updatedItem.votesB || 0) + 1;
+    }
+    
+    // Update user list if not already there
+    if (!updatedItem.votedUserIds?.includes(user.id)) {
+      updatedItem.votedUserIds = [...(updatedItem.votedUserIds || []), user.id];
+    }
+    
     setVotedOption(option);
     localStorage.setItem(`daily_vote_${dailyItem.id}`, option);
     
-    setVoteCounts(prev => {
-      const newCounts = {
-        ...prev,
-        [option]: prev[option] + 1
-      };
-      localStorage.setItem(`vote_${option}_${dailyItem.id}`, newCounts[option].toString());
-      return newCounts;
+    setVoteCounts({
+      a: updatedItem.votesA,
+      b: updatedItem.votesB
     });
+
+    storage.updateDailyThisOrThat(updatedItem);
   };
 
   const getDropPreview = (drop: DropBoard) => {
@@ -113,12 +153,14 @@ export const Home = () => {
     allowAnonymous: true,
     allowTalks: true
   });
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [trendingTab, setTrendingTab] = useState<'trending' | 'newest'>('newest');
   const [quickImage, setQuickImage] = useState<string | null>(null);
   const [quickOptionCount, setQuickOptionCount] = useState<number>(2);
   const [quickOptions, setQuickOptions] = useState<string[]>(['', '', '', '', '', '']);
+
+  const removeQuickImage = () => {
+    setQuickImage(null);
+  };
 
   const handleQuickOptionCountChange = (count: number) => {
     setQuickOptionCount(count);
@@ -179,7 +221,7 @@ export const Home = () => {
       slug: quickPrompt.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || `drop-${Math.random().toString(36).substr(2, 9)}`,
       prompt: quickPrompt,
       type: selectedType,
-      ownerId: isLoggedIn ? 'user_minekaze' : 'guest_user',
+      ownerId: isLoggedIn ? storage.getUser().id : 'guest_user',
       createdAt: new Date().toISOString(),
       expiresAt: new Date(Date.now() + expirationMs).toISOString(),
       status: 'ACTIVE',
@@ -199,17 +241,10 @@ export const Home = () => {
     navigate(`/drop/${newDrop.slug}`);
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      navigate(`/explore?q=${encodeURIComponent(searchQuery)}`);
-    }
-  };
-
   const trendingList = storage.getTrendingDrops();
   const newList = storage.getNewDrops();
   const displayDrops = trendingTab === 'trending' ? trendingList : newList;
-  const recentDrops = drops.filter(d => d.ownerId === 'user_minekaze').slice(0, 3);
+  const recentDrops = drops.filter(d => d.ownerId === storage.getUser().id).slice(0, 3);
   
   const recentActivityTypes = Array.from(new Set(
     [...drops]
@@ -229,63 +264,21 @@ export const Home = () => {
     }
   };
 
+  const handleRestrictedAction = (e: React.MouseEvent, path: string) => {
+    if (!storage.getIsLoggedIn()) {
+      e.preventDefault();
+      window.dispatchEvent(new Event('open-login-modal'));
+    } else {
+      navigate(path);
+    }
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 items-start">      <div className="flex-1 min-w-0 space-y-7 w-full">
+    <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 items-start">
+      <div className="flex-1 min-w-0 space-y-7 w-full">
       <div className="space-y-2">
         {/* Header */}
-        <header className="flex justify-between items-center h-12">
-          {!isSearchOpen ? (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex-1">
-              <div className="block md:hidden">
-                <Link to="/">
-                  <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-36 h-auto object-contain -ml-1" />
-                </Link>
-              </div>
-              <div className="hidden md:block">
-                {storage.getIsLoggedIn() && (
-                  <h1 className="text-[12px] md:text-[14px] text-gray-500 dark:text-dark-muted uppercase tracking-wider font-bold leading-relaxed whitespace-nowrap">
-                    {t.home.bannerTitle}
-                  </h1>
-                )}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.form 
-              initial={{ opacity: 0, width: 0 }} 
-              animate={{ opacity: 1, width: '100%' }} 
-              className="flex-1 mr-3"
-              onSubmit={handleSearch}
-            >
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search kepoan..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  autoFocus
-                  className="w-full pl-9 pr-4 py-2 bg-gray-100 dark:bg-dark-surface border-none rounded-full text-sm focus:ring-2 focus:ring-primary dark:text-dark-text outline-none"
-                  onBlur={() => {
-                    if (!searchQuery) setIsSearchOpen(false);
-                  }}
-                />
-              </div>
-            </motion.form>
-          )}
-          <div className="flex items-center gap-1">
-            {!isSearchOpen && (
-              <button 
-                onClick={() => setIsSearchOpen(true)}
-                className="p-2 text-gray-400 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-surface rounded-full transition-colors cursor-pointer"
-              >
-                <Search size={20} />
-              </button>
-            )}
-            {storage.getIsLoggedIn() && (
-              <NotificationBell />
-            )}
-          </div>
-        </header>
+        <Header bannerTitle={storage.getIsLoggedIn() ? t.home.bannerTitle : undefined} />
 
         {/* Announcement Banner */}
         <AnnouncementBanner />
@@ -300,6 +293,30 @@ export const Home = () => {
             <h1 className="text-[28px] sm:text-[32px] font-extrabold tracking-tight text-gray-900 dark:text-dark-text leading-tight">
               {t.home.heroTitle1} <br className="sm:hidden" /> <span className="text-[#12A889]">{t.home.heroTitle2}</span>
             </h1>
+
+            {/* Mobile Login Card - Only for guests on mobile */}
+            <div className="block sm:hidden bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#12A889]/10 flex items-center justify-center text-[#12A889]">
+                  <User size={20} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                    {lang === 'en' ? 'Join Kepoin' : 'Ikut Kepoin'}
+                  </h3>
+                  <p className="text-[11px] text-gray-500 dark:text-dark-muted font-medium">
+                    {lang === 'en' ? 'Join our curious community now' : 'Penasaran? Join komunitas sekarang'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => window.dispatchEvent(new Event('open-login-modal'))}
+                className="w-full bg-[#12A889] hover:bg-[#12A889]/90 text-white py-3 rounded-xl text-sm font-black shadow-lg shadow-[#12A889]/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{lang === 'en' ? 'Login or Register' : 'Masuk atau Daftar'}</span>
+                <ChevronRight size={16} strokeWidth={3} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -323,6 +340,22 @@ export const Home = () => {
                   }
                 }}
               />
+              
+              {/* Image Preview Overlay */}
+              {quickImage && (
+                <div className="absolute left-3 bottom-3 group z-20">
+                  <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden border-2 border-[#12A889] shadow-xl animate-in zoom-in duration-300 bg-gray-100 dark:bg-dark-bg">
+                    <img src={quickImage} className="w-full h-full object-contain" alt="Preview" />
+                    <button 
+                      onClick={removeQuickImage}
+                      className="absolute top-1 right-1 p-1.5 bg-black/60 text-white hover:bg-red-500 transition-colors rounded-lg shadow-lg backdrop-blur-sm"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Gallery upload inside placeholder on the right side */}
               <div className="absolute right-3 top-3">
                 <input 
@@ -493,34 +526,8 @@ export const Home = () => {
         )}
       </div>
 
-      {/* Activity Bar */}
-      <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl sm:rounded-full px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="w-2 h-2 rounded-full bg-[#12A889] animate-pulse" />
-          <span className="text-[13px] font-medium text-gray-800 dark:text-dark-text flex items-center gap-1.5">
-            {droppingCount} {t.home.peopleDropping}
-          </span>
-        </div>
-        <div className="text-[12px] font-medium text-gray-600 dark:text-dark-muted flex flex-wrap items-center gap-2 overflow-x-auto hide-scrollbar sm:justify-end">
-          {recentActivityTypes.length > 0 ? (
-            <>
-              {recentActivityTypes.map((type) => (
-                <span key={type} className="flex items-center gap-1.5 bg-gray-50 dark:bg-dark-bg px-3 py-1.5 rounded-full border border-gray-100 dark:border-dark-border">
-                  <span>{getTypeIcon(type)}</span>
-                  <span className="capitalize">{t.create.types[type as keyof typeof t.create.types] || type}</span>
-                </span>
-              ))}
-              <Link to="/discover" className="flex items-center gap-1.5 bg-orange-50 dark:bg-[#12A889]/10 text-[#12A889] dark:text-orange-400 px-3 py-1.5 rounded-full border border-orange-200 dark:border-[#12A889]/20 hover:underline">
-                <span>{t.home.more}</span>
-              </Link>
-            </>
-          ) : (
-            <span className="flex items-center gap-1.5 bg-gray-50 dark:bg-dark-bg px-3 py-1.5 rounded-full border border-gray-100 dark:border-dark-border">
-              <span>{t.home.waitingDrops}</span>
-            </span>
-          )}
-        </div>
-      </div>
+      {/* Activity Bar - REMOVED AS PER USER REQUEST */}
+
 
       {/* Feed Tabs: TRENDING & NEW */}
       {drops.length > 0 && (
@@ -550,7 +557,11 @@ export const Home = () => {
                 </button>
               )}
             </div>
-            <Link to="/discover" className="text-[13px] font-semibold text-[#12A889] hover:underline">
+            <Link 
+              to="/discover" 
+              onClick={(e) => handleRestrictedAction(e, '/discover')}
+              className="text-[13px] font-semibold text-[#12A889] hover:underline"
+            >
               {t.home.seeAll} →
             </Link>
           </div>
@@ -581,7 +592,11 @@ export const Home = () => {
 
                   {/* Middle: Info */}
                   <div className="flex-1 min-w-0">
-                    <Link to={`/drop/${drop.slug}`} className="block">
+                    <Link 
+                      to={`/drop/${drop.slug}`} 
+                      onClick={(e) => handleRestrictedAction(e, `/drop/${drop.slug}`)}
+                      className="block"
+                    >
                       <h3 className="text-[15px] sm:text-[16px] font-bold text-gray-900 dark:text-white leading-snug mb-1 truncate">
                         {drop.prompt}
                       </h3>
@@ -612,7 +627,7 @@ export const Home = () => {
                         <>
                           {photos.slice(0, 3).map((url, i) => (
                             <div key={i} className="w-12 h-12 sm:w-14 sm:h-14 rounded-lg bg-gray-200 overflow-hidden shadow-xs border border-white/50 shrink-0">
-                              <img src={url} className="w-full h-full object-cover" onError={(e) => { (e.target).src = 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=100&h=100&fit=crop'; }} />
+                              <img src={url} className="w-full h-full object-contain bg-gray-100 dark:bg-dark-bg" onError={(e) => { (e.target).src = 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=100&h=100&fit=crop'; }} />
                             </div>
                           ))}
                           {extraCount > 0 && (
@@ -718,6 +733,7 @@ export const Home = () => {
       {/* Small Discover CTA */}
       <Link 
         to="/discover"
+        onClick={(e) => handleRestrictedAction(e, '/discover')}
         className="block bg-charcoal dark:bg-dark-surface dark:border dark:border-dark-border text-white rounded-xl p-5 sm:p-6 relative overflow-hidden group"
       >
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -773,25 +789,42 @@ export const Home = () => {
                   </>
                 ) : (
                   <div className="space-y-2">
-                    <div className="w-full bg-white/10 border border-white/20 rounded-xl p-3 relative overflow-hidden">
+                    <button 
+                      onClick={() => handleVote('a')}
+                      className={`w-full bg-white/10 border rounded-xl p-3 relative overflow-hidden transition-all text-left cursor-pointer ${votedOption === 'a' ? 'border-white ring-1 ring-white' : 'border-white/20 hover:bg-white/20'}`}
+                    >
                        <div 
-                         className="absolute top-0 left-0 bottom-0 bg-white/20" 
-                         style={{ width: `${Math.round((voteCounts.a / (voteCounts.a + voteCounts.b)) * 100)}%` }}
+                         className="absolute top-0 left-0 bottom-0 bg-white/30 pointer-events-none" 
+                         style={{ width: `${Math.round((voteCounts.a / (voteCounts.a + voteCounts.b || 1)) * 100)}%` }}
                        />
-                       <div className="relative z-10 flex justify-between items-center text-[13px] font-bold">
+                       <div className="relative z-10 flex justify-between items-center text-[13px] font-bold pointer-events-none">
                          <span>{dailyItem.optionA} {votedOption === 'a' && '✓'}</span>
-                         <span>{Math.round((voteCounts.a / (voteCounts.a + voteCounts.b)) * 100)}%</span>
+                         <span>{voteCounts.a + voteCounts.b > 0 ? Math.round((voteCounts.a / (voteCounts.a + voteCounts.b)) * 100) : 0}%</span>
                        </div>
-                    </div>
-                    <div className="w-full bg-white/10 border border-white/20 rounded-xl p-3 relative overflow-hidden">
+                    </button>
+                    <button 
+                      onClick={() => handleVote('b')}
+                      className={`w-full bg-white/10 border rounded-xl p-3 relative overflow-hidden transition-all text-left cursor-pointer ${votedOption === 'b' ? 'border-white ring-1 ring-white' : 'border-white/20 hover:bg-white/20'}`}
+                    >
                        <div 
-                         className="absolute top-0 left-0 bottom-0 bg-white/20" 
-                         style={{ width: `${Math.round((voteCounts.b / (voteCounts.a + voteCounts.b)) * 100)}%` }}
+                         className="absolute top-0 left-0 bottom-0 bg-white/30 pointer-events-none" 
+                         style={{ width: `${Math.round((voteCounts.b / (voteCounts.a + voteCounts.b || 1)) * 100)}%` }}
                        />
-                       <div className="relative z-10 flex justify-between items-center text-[13px] font-bold">
+                       <div className="relative z-10 flex justify-between items-center text-[13px] font-bold pointer-events-none">
                          <span>{dailyItem.optionB} {votedOption === 'b' && '✓'}</span>
-                         <span>{Math.round((voteCounts.b / (voteCounts.a + voteCounts.b)) * 100)}%</span>
+                         <span>{voteCounts.a + voteCounts.b > 0 ? Math.round((voteCounts.b / (voteCounts.a + voteCounts.b)) * 100) : 0}%</span>
                        </div>
+                    </button>
+                    <div className="text-center pt-1">
+                      <button 
+                        onClick={() => {
+                          localStorage.removeItem(`daily_vote_${dailyItem.id}`);
+                          setVotedOption(null);
+                        }}
+                        className="text-[10px] font-bold text-white/60 hover:text-white transition-colors"
+                      >
+                        {lang === 'id' ? 'Ganti Pilihan' : 'Change Vote'}
+                      </button>
                     </div>
                   </div>
                 )}

@@ -11,6 +11,8 @@ import { Bookmark, PlusCircle } from 'lucide-react';
 
 import { useLanguage } from '../lib/i18n';
 
+import { Header } from '../components/Header';
+
 export const Saved = () => {
   const { t, lang } = useLanguage();
   const [savedDrops, setSavedDrops] = useState<DropBoard[]>([]);
@@ -27,10 +29,7 @@ export const Saved = () => {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl md:text-[28px] font-bold text-charcoal dark:text-dark-text tracking-tight">{t.saved.header}</h1>
-        <p className="text-[14px] text-gray-500 dark:text-dark-muted">{t.saved.subtitle}</p>
-      </header>
+      <Header title={t.saved.header} subtitle={t.saved.subtitle} showSearch={false} />
 
       {savedDrops.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

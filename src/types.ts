@@ -180,6 +180,10 @@ export interface DailyThisOrThat {
   prompt: string;
   optionA: string;
   optionB: string;
+  votesA?: number;
+  votesB?: number;
+  votedUserIds?: string[];
   updatedAt: string;
+  createdAt?: string;
 }
 

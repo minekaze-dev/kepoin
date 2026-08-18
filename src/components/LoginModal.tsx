@@ -110,6 +110,8 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
         }
 
         storage.setIsLoggedIn(true);
+        // Sync data from Supabase for this user
+        await storage.syncWithSupabase();
         onClose();
         window.location.reload();
         return;
@@ -124,6 +126,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       if (foundUser) {
         storage.saveUser(foundUser);
         storage.setIsLoggedIn(true);
+        await storage.syncWithSupabase();
         onClose();
         window.location.reload();
         return;
@@ -249,6 +252,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       // Save user to Supabase table and local cache
       storage.saveUser(newUser);
       storage.setIsLoggedIn(true);
+      await storage.syncWithSupabase();
       onClose();
       window.location.reload();
     } catch (err: any) {

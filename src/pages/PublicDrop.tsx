@@ -33,7 +33,8 @@ import { storage } from '../lib/storage';
 import { DropBoard, DropResponse, ResponseType } from '../types';
 import { useLanguage } from '../lib/i18n';
 
-const REACTION_EMOJIS = ['❤️', '😂', '🔥', '👀', '👍'];
+const DROP_REACTION_EMOJIS = ['❤️', '😂', '🔥', '👀', '👍'];
+const ANSWER_REACTION_EMOJIS = ['❤️'];
 
 export const PublicDrop = () => {
   const { t, lang } = useLanguage();
@@ -52,10 +53,10 @@ export const PublicDrop = () => {
     storage.checkAndNotifyExpiringDrops();
     const allDrops = storage.getDrops();
     const foundDrop = allDrops.find(d => d.slug === slug);
-    if (foundDrop) {
+      if (foundDrop) {
       setDrop(foundDrop);
       setResponses(storage.getResponses(foundDrop.id));
-      setIsSaved(storage.getSavedDrops().includes(foundDrop.id));
+      setIsSaved((storage.getSavedDrops() || []).includes(foundDrop.id));
       const userReactions = storage.getUserReactions();
       setDropUserReactions(userReactions[foundDrop.id] || []);
     }
@@ -138,49 +139,27 @@ export const PublicDrop = () => {
       {/* Hero / Header */}
       <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-2xl shadow-sm overflow-hidden flex flex-col">
         <div className="p-6 md:p-8 space-y-6">
-          <div className="flex flex-col gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="bg-orange-50 dark:bg-[#12A889]/10 text-[#12A889] dark:text-[#12A889] px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider">
-                  {t.create.types[drop.type.toUpperCase() as keyof typeof t.create.types] || drop.type}
-                </span>
-                <span className={`flex items-center gap-1 text-[11px] font-bold ${!isExpired && drop.status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${!isExpired && drop.status === 'ACTIVE' ? 'bg-green-600' : 'bg-red-500'}`} />
-                  {isExpired ? (lang === 'id' ? 'BERAKHIR' : 'EXPIRED') : drop.status}
-                </span>
-              </div>
-              <h1 className="text-3xl font-black text-charcoal dark:text-dark-text uppercase leading-tight">
-                {drop.prompt}
-              </h1>
-              {drop.description && (
-                <p className="text-gray-500 dark:text-dark-muted text-[15px]">{drop.description}</p>
-              )}
-              
-              {/* User-provided image for the drop board */}
-              {drop.coverImage && (
-                <div className="mt-4 w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-dark-border shadow-sm">
-                  <img src={drop.coverImage} alt={drop.prompt} className="w-full h-auto object-cover max-h-[500px]" />
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-orange-50 dark:bg-[#12A889]/10 text-[#12A889] dark:text-[#12A889] px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider">
+                      {t.create.types[drop.type.toUpperCase() as keyof typeof t.create.types] || drop.type}
+                    </span>
+                    <span className={`flex items-center gap-1 text-[11px] font-bold ${!isExpired && drop.status === 'ACTIVE' ? 'text-green-600' : 'text-red-500'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${!isExpired && drop.status === 'ACTIVE' ? 'bg-green-600' : 'bg-red-500'}`} />
+                      {isExpired ? (lang === 'id' ? 'BERAKHIR' : 'EXPIRED') : drop.status}
+                    </span>
+                  </div>
+                  <h1 className="text-2xl sm:text-3xl font-black text-charcoal dark:text-dark-text uppercase leading-tight pr-20 sm:pr-0">
+                    {drop.prompt}
+                  </h1>
+                  {drop.description && (
+                    <p className="text-gray-500 dark:text-dark-muted text-[15px]">{drop.description}</p>
+                  )}
                 </div>
-              )}
 
-              <div className="flex items-center justify-between gap-3 text-[13px] text-gray-400 dark:text-dark-muted pt-2">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-gray-600 dark:text-dark-text">
-                    {responses.length} {lang === 'en' ? (responses.length === 1 ? 'answer' : 'answers') : 'jawaban'}
-                  </span>
-                  <span>•</span>
-                  <span>
-                    {t.public.createdBy}{' '}
-                    <Link 
-                      to={`/profile/${storage.getUserById(drop.ownerId)?.username.replace('@', '') || ''}`}
-                      className="hover:text-[#12A889] font-bold transition-colors"
-                    >
-                      {drop.ownerId === 'user_minekaze' ? t.public.you : (storage.getUserById(drop.ownerId)?.name || t.public.someone)}
-                    </Link>
-                  </span>
-                </div>
-                
-                <div className="flex items-center gap-2">
+                {/* Desktop Buttons (Visible on sm+) */}
+                <div className="hidden sm:flex items-center gap-2 shrink-0 pt-2">
                   <button 
                     onClick={handleToggleSave}
                     className={`p-2 rounded-lg border transition-all ${isSaved ? 'bg-orange-50 dark:bg-[#12A889]/10 border-orange-200 dark:border-[#12A889] text-[#12A889] dark:text-[#12A889]' : 'bg-white dark:bg-dark-surface border-gray-100 dark:border-dark-border text-gray-400 dark:text-dark-muted hover:border-gray-200 dark:hover:border-dark-muted'}`}
@@ -209,44 +188,102 @@ export const PublicDrop = () => {
                     onToggleSave={handleToggleSave}
                   />
                 </div>
+
+                {/* Mobile Absolute Buttons (Top Right) */}
+                <div className="absolute top-4 right-4 flex sm:hidden items-center gap-1.5">
+                  <button 
+                    onClick={handleToggleSave}
+                    className={`p-1.5 rounded-lg border transition-all ${isSaved ? 'bg-orange-50 dark:bg-[#12A889]/10 border-orange-200 dark:border-[#12A889] text-[#12A889] dark:text-[#12A889]' : 'bg-white dark:bg-dark-surface border-gray-100 dark:border-dark-border text-gray-400 dark:text-dark-muted hover:border-gray-200 dark:hover:border-dark-muted'}`}
+                  >
+                    <Heart size={14} fill={isSaved ? 'currentColor' : 'none'} />
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const url = window.location.href;
+                      navigator.clipboard.writeText(url);
+                      alert(lang === 'en' ? 'Share link copied to clipboard!' : 'Tautan berhasil disalin ke clipboard!');
+                    }}
+                    className="p-1.5 bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border text-gray-400 dark:text-dark-muted hover:border-gray-200 dark:hover:border-dark-muted rounded-lg transition-all"
+                  >
+                    <Share2 size={14} />
+                  </button>
+                  <div className="scale-90 origin-right">
+                    <ContentMenu 
+                      targetType="ASK" 
+                      targetId={drop.id} 
+                      targetTitle={drop.prompt} 
+                      targetContent={drop.description} 
+                      targetOwnerName={storage.getUserById(drop.ownerId)?.name} 
+                      targetOwnerUsername={storage.getUserById(drop.ownerId)?.username} 
+                      targetOwnerId={drop.ownerId}
+                      isSaved={isSaved}
+                      onToggleSave={handleToggleSave}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* User-provided image for the drop board */}
+              {drop.coverImage && (
+                <div className="mt-4 w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-dark-border shadow-sm bg-gray-50 dark:bg-dark-bg">
+                  <img src={drop.coverImage} alt={drop.prompt} className="w-full h-auto object-contain max-h-[600px] mx-auto" />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 text-[13px] text-gray-400 dark:text-dark-muted pt-2">
+                <div className="flex items-center gap-3">
+                  <span className="font-bold text-gray-600 dark:text-dark-text">
+                    {responses.length} {lang === 'en' ? (responses.length === 1 ? 'answer' : 'answers') : 'jawaban'}
+                  </span>
+                  <span>•</span>
+                  <span>
+                    {t.public.createdBy}{' '}
+                    <Link 
+                      to={`/profile/${storage.getUserById(drop.ownerId)?.username.replace('@', '') || ''}`}
+                      className="hover:text-[#12A889] font-bold transition-colors"
+                    >
+                      {drop.ownerId === storage.getUser().id ? t.public.you : (storage.getUserById(drop.ownerId)?.name || t.public.someone)}
+                    </Link>
+                  </span>
+                </div>
               </div>
 
               {/* Reaction Bar on Drop Board (Rule 3: Reaction ❤️ 😂 🔥 👀 👍) */}
-              <div className="pt-3 border-t border-gray-100 dark:border-dark-border flex items-center flex-wrap gap-2">
-                <span className="text-[12px] font-bold text-gray-400 dark:text-dark-muted mr-1">
+              <div className="pt-3 border-t border-gray-100 dark:border-dark-border flex flex-col gap-2">
+                <span className="text-[12px] font-bold text-gray-400 dark:text-dark-muted">
                   {lang === 'id' ? 'Reaksi Pertanyaan:' : 'Question Reactions:'}
                 </span>
-                {REACTION_EMOJIS.map((emoji) => {
-                  const isUserReacted = dropUserReactions.includes(emoji);
-                  const count = (drop.reactions?.find(r => r.emoji === emoji)?.count) || 0;
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      disabled={isExpired}
-                      onClick={() => handleDropReact(emoji)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[13px] font-bold transition-all ${
-                        isUserReacted 
-                          ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 ring-2 ring-amber-400 dark:ring-amber-600 scale-105' 
-                          : 'bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border hover:scale-105'
-                      } ${isExpired ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      <span>{emoji}</span>
-                      {count > 0 && <span className="text-[11px] font-black">{count}</span>}
-                    </button>
-                  );
-                })}
+                <div className="flex items-center flex-wrap gap-2">
+                  {DROP_REACTION_EMOJIS.map((emoji) => {
+                    const isUserReacted = dropUserReactions?.includes(emoji) || false;
+                    const count = (drop.reactions?.find(r => r.emoji === emoji)?.count) || 0;
+                    return (
+                      <button
+                        key={emoji}
+                        type="button"
+                        disabled={isExpired}
+                        onClick={() => handleDropReact(emoji)}
+                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-[14px] font-bold transition-all shadow-sm ${
+                          isUserReacted 
+                            ? 'bg-[#12A889]/10 text-[#12A889] ring-2 ring-[#12A889]/30 scale-110' 
+                            : 'bg-gray-50 dark:bg-dark-bg text-gray-600 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border hover:scale-110 active:scale-95'
+                        } ${isExpired ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        <span>{emoji}</span>
+                        {count > 0 && <span className="text-[12px] font-extrabold">{count}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="px-6 md:px-8 pb-6 md:pb-8">
+            <div className="px-6 md:px-8 pb-6 md:pb-8">
           <button 
             onClick={handleOpenDropYours}
             disabled={isExpired || drop.status !== 'ACTIVE'}
             className={`
-              w-full flex items-center justify-center gap-2 py-4 rounded-xl text-[16px] font-black transition-all shadow-lg
+              w-full flex items-center justify-center gap-2 py-3 rounded-xl text-[16px] font-black transition-all shadow-lg
               ${!isExpired && drop.status === 'ACTIVE'
                 ? 'bg-[#12A889] text-white hover:bg-[#12A889] shadow-[#12A889]/20 cursor-pointer' 
                 : 'bg-gray-100 dark:bg-dark-border text-gray-400 dark:text-dark-muted cursor-not-allowed'}
@@ -263,7 +300,7 @@ export const PublicDrop = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-[18px] font-bold text-charcoal dark:text-dark-text">{t.public.community}</h2>
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-gray-100 dark:bg-dark-bg p-1 rounded-lg border border-gray-200 dark:border-dark-border">
+            <div className="hidden sm:flex items-center bg-gray-100 dark:bg-dark-bg p-1 rounded-lg border border-gray-200 dark:border-dark-border">
               <button
                 onClick={() => setViewMode('grid')}
                 className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-dark-surface shadow-xs text-charcoal dark:text-dark-text' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
@@ -396,20 +433,20 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
       case 'PHOTO':
         return (
           <div 
-            className={`${isListMode ? 'aspect-square w-full h-full' : 'aspect-[4/3] sm:aspect-video w-full mb-3'} rounded-xl overflow-hidden bg-gray-50 dark:bg-dark-bg border border-gray-100 dark:border-dark-border cursor-pointer relative group shrink-0`}
+            className={`${isListMode ? 'aspect-square w-full h-full' : 'w-full mb-3'} rounded-xl overflow-hidden bg-gray-50 dark:bg-dark-bg border border-gray-100 dark:border-dark-border cursor-pointer relative group shrink-0`}
             onClick={() => onPhotoClick?.(response.content)}
           >
             <img 
               src={response.content} 
               alt={response.caption || 'Response photo'} 
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              className={`w-full ${isListMode ? 'h-full object-cover' : 'h-auto max-h-[500px] object-contain mx-auto bg-gray-100 dark:bg-dark-bg'} group-hover:scale-105 transition-transform duration-300`}
               onError={(e) => {
                 (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=600&h=400&fit=crop';
               }}
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
               <span className="opacity-0 group-hover:opacity-100 text-white bg-black/60 px-2 py-1 sm:px-3.5 sm:py-1.5 rounded-full text-[10px] sm:text-[12px] font-bold backdrop-blur-xs transition-opacity shadow-sm">
-                Lihat
+                {lang === 'id' ? 'Lihat' : 'View'}
               </span>
             </div>
           </div>
@@ -527,21 +564,21 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
         {/* Reactions Bar on Answer Card */}
         <div className={`mt-auto flex items-center justify-between border-gray-50 dark:border-dark-border ${isListMode ? 'pt-1' : 'border-t pt-3'}`}>
           <div className="flex items-center flex-wrap gap-1.5">
-            {REACTION_EMOJIS.map((emoji) => {
-              const isUserReacted = userReactedEmojis.includes(emoji);
+            {ANSWER_REACTION_EMOJIS.map((emoji) => {
+              const isUserReacted = userReactedEmojis?.includes(emoji) || false;
               const count = (localReactions.find(r => r.emoji === emoji)?.count) || 0;
               return (
                 <button 
                   key={emoji}
                   disabled={isExpired}
                   onClick={() => handleReact(emoji)}
-                  className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold transition-all ${
                     isUserReacted 
-                      ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 ring-1 ring-amber-400' 
+                      ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 ring-1 ring-amber-400 scale-105' 
                       : 'bg-gray-50 dark:bg-dark-bg text-gray-400 dark:text-dark-muted hover:bg-gray-100 dark:hover:bg-dark-border'
                   } ${isExpired ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
-                  <span>{emoji}</span>
+                  <Heart size={13} fill={isUserReacted ? 'currentColor' : 'none'} className={isUserReacted ? 'text-amber-600' : ''} />
                   {count > 0 && <span>{count}</span>}
                 </button>
               );
@@ -602,12 +639,12 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                 </div>
 
                 <div className="flex items-center gap-3 text-xs text-gray-500 pt-4 border-t border-gray-200 dark:border-dark-border flex-wrap">
-                  {REACTION_EMOJIS.map(emoji => {
+                  {ANSWER_REACTION_EMOJIS.map(emoji => {
                     const count = (localReactions.find(r => r.emoji === emoji)?.count) || 0;
                     if (count === 0) return null;
                     return (
                       <span key={emoji} className="flex items-center gap-1 font-bold bg-white dark:bg-dark-surface px-2 py-0.5 rounded-full border border-gray-200 dark:border-dark-border">
-                        {emoji} {count}
+                        <Heart size={11} fill="currentColor" className="text-amber-600" /> {count}
                       </span>
                     );
                   })}
@@ -739,6 +776,12 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                       type="text" 
                       name="talk"
                       disabled={isExpired}
+                      onFocus={(e) => {
+                        if (!storage.getIsLoggedIn()) {
+                          e.target.blur();
+                          window.dispatchEvent(new Event('open-login-modal'));
+                        }
+                      }}
                       placeholder={isExpired ? (lang === 'id' ? 'Pertanyaan telah berakhir' : 'Question has expired') : (lang === 'id' ? 'Tulis obrolan... (@username untuk mention)' : 'Add a talk... (@username to mention)')}
                       className="flex-1 bg-gray-50 dark:bg-dark-bg border border-gray-200 dark:border-dark-border rounded-xl px-4 py-2.5 text-[13px] outline-none focus:border-[#12A889] dark:text-dark-text transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       autoComplete="off"
@@ -896,9 +939,18 @@ const RespondModal = ({ isOpen, onClose, drop, onSuccess }: { isOpen: boolean, o
               
               {drop.type === 'PHOTO' && (
                 <div className="space-y-3">
-                  <div className="w-full h-40 border-2 border-dashed border-gray-200 dark:border-dark-border rounded-xl flex flex-col items-center justify-center gap-2 relative overflow-hidden group hover:border-orange-200 dark:hover:border-[#12A889] transition-colors">
+                  <div className="w-full min-h-[160px] max-h-[320px] border-2 border-dashed border-gray-200 dark:border-dark-border rounded-xl flex flex-col items-center justify-center gap-2 relative overflow-hidden group hover:border-orange-200 dark:hover:border-[#12A889] transition-colors bg-gray-50 dark:bg-dark-bg">
                     {preview ? (
-                      <img src={preview} alt="preview" className="w-full h-full object-cover" />
+                      <div className="w-full h-full relative group">
+                        <img src={preview} alt="preview" className="w-full h-full max-h-[320px] object-contain" />
+                        <button 
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setPreview(null); setContent(''); }}
+                          className="absolute top-2 right-2 p-1.5 bg-black/60 text-white rounded-full hover:bg-red-500 transition-colors shadow-lg"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     ) : (
                       <>
                         <Image size={32} className="text-gray-300 dark:text-dark-muted" />
@@ -1009,7 +1061,7 @@ const RespondModal = ({ isOpen, onClose, drop, onSuccess }: { isOpen: boolean, o
 
           <button 
             type="submit"
-            className="w-full py-4 bg-[#12A889] text-white rounded-xl font-black text-[16px] hover:bg-[#12A889] transition-all shadow-lg shadow-[#12A889]/20"
+            className="w-full py-3 bg-[#12A889] text-white rounded-xl font-black text-[16px] hover:bg-[#12A889] transition-all shadow-lg shadow-[#12A889]/20"
           >
             {t.public.submitDrop}
           </button>

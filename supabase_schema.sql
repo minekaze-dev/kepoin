@@ -125,6 +125,19 @@ CREATE TABLE IF NOT EXISTS public.reports (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 2.8 DAILY THIS OR THAT TABLE
+CREATE TABLE IF NOT EXISTS public.daily_this_or_that (
+    id TEXT PRIMARY KEY DEFAULT 'daily_default_1',
+    prompt TEXT NOT NULL,
+    option_a TEXT NOT NULL,
+    option_b TEXT NOT NULL,
+    votes_a INTEGER DEFAULT 0,
+    votes_b INTEGER DEFAULT 0,
+    voted_user_ids JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ==============================================================================
 -- 3. ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
@@ -201,6 +214,16 @@ ON public.reports FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Admins can view and manage reports" 
 ON public.reports FOR ALL USING (true);
+
+-- 3.8 DAILY THIS OR THAT POLICIES
+CREATE POLICY "Everyone can view daily this or that" 
+ON public.daily_this_or_that FOR SELECT USING (true);
+
+CREATE POLICY "Everyone can vote on daily this or that" 
+ON public.daily_this_or_that FOR UPDATE USING (true);
+
+CREATE POLICY "Admins can manage daily this or that" 
+ON public.daily_this_or_that FOR ALL USING (true);
 
 -- ==============================================================================
 -- 4. AUTOMATED EXPIRATION CRON / FUNCTION (3-Day Limit)

@@ -90,6 +90,8 @@ export async function fetchDropsFromSupabase(): Promise<DropBoard[] | null> {
         allowTalks: true,
       },
       stats: row.stats || { views: 0, saves: 0 },
+      reactions: row.reactions || [],
+      talks: row.talks || [],
     }));
   } catch (e) {
     console.error('Error fetching drops from Supabase:', e);
@@ -97,8 +99,28 @@ export async function fetchDropsFromSupabase(): Promise<DropBoard[] | null> {
   }
 }
 
+// Helper to ensure user exists in Supabase before foreign key insertion
+async function ensureUserExistsInSupabase(userId: string, name = 'Pengguna Kepoin', username = '@user') {
+  if (!userId) return;
+  try {
+    const { data } = await supabase.from('users').select('id').eq('id', userId).maybeSingle();
+    if (!data) {
+      await supabase.from('users').upsert({
+        id: userId,
+        name: name,
+        username: username.startsWith('@') ? username : `@${username.replace(/[^a-zA-Z0-9_]/g, '')}`,
+        created_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    }
+  } catch (err) {
+    console.warn('ensureUserExistsInSupabase warning:', err);
+  }
+}
+
 export async function insertDropToSupabase(drop: DropBoard): Promise<boolean> {
   try {
+    await ensureUserExistsInSupabase(drop.ownerId, 'Pengguna Kepoin', 'user_' + (drop.ownerId || 'anon').slice(-6));
+
     const { error } = await supabase.from('drops').upsert({
       id: drop.id,
       slug: drop.slug,
@@ -116,6 +138,8 @@ export async function insertDropToSupabase(drop: DropBoard): Promise<boolean> {
       is_guest: !!drop.isGuest,
       settings: drop.settings,
       stats: drop.stats,
+      reactions: drop.reactions || [],
+      talks: drop.talks || [],
     });
     if (error) {
       console.warn('Error saving drop to Supabase:', error.message);
@@ -204,6 +228,10 @@ export async function fetchResponsesFromSupabase(): Promise<DropResponse[] | nul
 
 export async function insertResponseToSupabase(resp: DropResponse): Promise<boolean> {
   try {
+    if (resp.userId) {
+      await ensureUserExistsInSupabase(resp.userId, resp.userName, 'user_' + resp.userId.slice(-6));
+    }
+
     const { error } = await supabase.from('drop_responses').upsert({
       id: resp.id,
       drop_id: resp.dropId,
@@ -514,6 +542,9 @@ export async function fetchDailyThisOrThatFromSupabase(): Promise<DailyThisOrTha
       prompt: data.prompt,
       optionA: data.option_a,
       optionB: data.option_b,
+      votesA: data.votes_a || 0,
+      votesB: data.votes_b || 0,
+      votedUserIds: data.voted_user_ids || [],
       updatedAt: data.updated_at,
     };
   } catch (e) {
@@ -528,6 +559,9 @@ export async function updateDailyThisOrThatInSupabase(item: DailyThisOrThat): Pr
       prompt: item.prompt,
       option_a: item.optionA,
       option_b: item.optionB,
+      votes_a: item.votesA || 0,
+      votes_b: item.votesB || 0,
+      voted_user_ids: item.votedUserIds || [],
       updated_at: new Date().toISOString(),
     });
     return !error;
@@ -587,6 +621,23 @@ export async function saveUserToSupabase(user: UserProfile): Promise<boolean> {
     });
     return !error;
   } catch (err) {
+    return false;
+  }
+}
+
+export async function deleteUserFromSupabase(userId: string): Promise<boolean> {
+  try {
+    // Delete user profile
+    const { error: userError } = await supabase.from('users').delete().eq('id', userId);
+    
+    // Also delete their drops and responses to prevent orphan data
+    await supabase.from('drops').delete().eq('owner_id', userId);
+    await supabase.from('drop_responses').delete().eq('user_id', userId);
+    await supabase.from('notifications').delete().eq('user_id', userId);
+
+    return !userError;
+  } catch (err) {
+    console.error('Error deleting user from Supabase:', err);
     return false;
   }
 }

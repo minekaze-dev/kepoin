@@ -167,6 +167,9 @@ export const initialDailyThisOrThat: DailyThisOrThat = {
   prompt: 'Kopi Kenangan vs Kopi Tuku?',
   optionA: '☕ Kopi Kenangan',
   optionB: '🥛 Kopi Tuku (Tetangga)',
+  votesA: 1243,
+  votesB: 842,
+  votedUserIds: [],
   updatedAt: new Date(NOW - 3600 * 1000).toISOString()
 };
 

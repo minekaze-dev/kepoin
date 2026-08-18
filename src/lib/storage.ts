@@ -47,6 +47,7 @@ import {
   updateDailyThisOrThatInSupabase,
   fetchUsersFromSupabase,
   saveUserToSupabase,
+  deleteUserFromSupabase,
   fetchNotificationsFromSupabase,
   insertNotificationToSupabase
 } from './supabase';
@@ -81,31 +82,60 @@ export const storage = {
     isSyncing = true;
 
     try {
+      // Helper to merge arrays by ID
+      const mergeById = (local: any[], remote: any[]) => {
+        const remoteIds = new Set(remote.map(i => i.id));
+        const onlyLocal = local.filter(i => !remoteIds.has(i.id));
+        return [...remote, ...onlyLocal];
+      };
+
       // 1. Drops
-      const drops = await fetchDropsFromSupabase();
-      if (drops && drops.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.DROPS, JSON.stringify(drops));
+      const remoteDrops = await fetchDropsFromSupabase();
+      if (remoteDrops) {
+        const localDrops = storage.getDrops(true, true);
+        const mergedDrops = mergeById(localDrops, remoteDrops);
+        localStorage.setItem(STORAGE_KEYS.DROPS, JSON.stringify(mergedDrops));
+        
+        // Push any local-only drops to Supabase
+        const remoteIds = new Set(remoteDrops.map(d => d.id));
+        for (const drop of localDrops) {
+          if (!remoteIds.has(drop.id)) {
+            await insertDropToSupabase(drop);
+          }
+        }
       }
 
       // 2. Responses
-      const responses = await fetchResponsesFromSupabase();
-      if (responses && responses.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.RESPONSES, JSON.stringify(responses));
+      const remoteResponses = await fetchResponsesFromSupabase();
+      if (remoteResponses) {
+        const localResponses = storage.getResponses();
+        const mergedResponses = mergeById(localResponses, remoteResponses);
+        localStorage.setItem(STORAGE_KEYS.RESPONSES, JSON.stringify(mergedResponses));
+
+        // Push any local-only responses to Supabase
+        const remoteIds = new Set(remoteResponses.map(r => r.id));
+        for (const resp of localResponses) {
+          if (!remoteIds.has(resp.id)) {
+            await insertResponseToSupabase(resp);
+          }
+        }
       }
 
       // 3. Reports
-      const reports = await fetchReportsFromSupabase();
-      if (reports && reports.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(reports));
+      const remoteReports = await fetchReportsFromSupabase();
+      if (remoteReports) {
+        const localReports = JSON.parse(localStorage.getItem(STORAGE_KEYS.REPORTS) || '[]');
+        const mergedReports = mergeById(localReports, remoteReports);
+        localStorage.setItem(STORAGE_KEYS.REPORTS, JSON.stringify(mergedReports));
       }
 
-      // 4. Platform Settings
+      // 4. Platform Settings (Remote wins)
       const settings = await fetchPlatformSettingsFromSupabase();
       if (settings) {
         localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
       }
 
-      // 5. Moderation Config
+      // 5. Moderation Config (Remote wins)
       const modConfig = await fetchModerationConfigFromSupabase();
       if (modConfig) {
         localStorage.setItem(STORAGE_KEYS.MODERATION, JSON.stringify(modConfig));
@@ -113,14 +143,16 @@ export const storage = {
 
       // 6. Announcements
       const announcements = await fetchAnnouncementsFromSupabase();
-      if (announcements && announcements.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(announcements));
+      if (announcements) {
+        const localAnn = JSON.parse(localStorage.getItem(STORAGE_KEYS.ANNOUNCEMENTS) || '[]');
+        localStorage.setItem(STORAGE_KEYS.ANNOUNCEMENTS, JSON.stringify(mergeById(localAnn, announcements)));
       }
 
       // 7. Activity Logs
       const logs = await fetchActivityLogsFromSupabase();
-      if (logs && logs.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(logs));
+      if (logs) {
+        const localLogs = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACTIVITY_LOGS) || '[]');
+        localStorage.setItem(STORAGE_KEYS.ACTIVITY_LOGS, JSON.stringify(mergeById(localLogs, logs)));
       }
 
       // 8. Daily This or That
@@ -131,8 +163,9 @@ export const storage = {
 
       // 9. Users
       const users = await fetchUsersFromSupabase();
-      if (users && users.length > 0) {
-        localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(users));
+      if (users) {
+        const localUsers = storage.getRegisteredUsers();
+        localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(mergeById(localUsers, users)));
       }
 
       // 10. Auto-cleanup expired drops
@@ -504,14 +537,14 @@ export const storage = {
     if (emojiIndex === -1) {
       // Add reaction
       reactions[responseId].push(emoji);
-      if (reactionObj) {
-        reactionObj.count++;
-        if (!reactionObj.userIds.includes(currentUserId)) {
-          reactionObj.userIds.push(currentUserId);
+        if (reactionObj) {
+          reactionObj.count++;
+          if (!reactionObj.userIds || !reactionObj.userIds.includes(currentUserId)) {
+            reactionObj.userIds = [...(reactionObj.userIds || []), currentUserId];
+          }
+        } else {
+          response.reactions.push({ emoji, count: 1, userIds: [currentUserId] });
         }
-      } else {
-        response.reactions.push({ emoji, count: 1, userIds: [currentUserId] });
-      }
 
       // Rule 4 & 6: Reaction notification on answer
       if (response.userId && drop) {
@@ -574,8 +607,8 @@ export const storage = {
       dropReactions[dropId].push(emoji);
       if (reactionObj) {
         reactionObj.count++;
-        if (!reactionObj.userIds.includes(currentUserId)) {
-          reactionObj.userIds.push(currentUserId);
+        if (!reactionObj.userIds || !reactionObj.userIds.includes(currentUserId)) {
+          reactionObj.userIds = [...(reactionObj.userIds || []), currentUserId];
         }
       } else {
         drop.reactions.push({ emoji, count: 1, userIds: [currentUserId] });
@@ -1046,8 +1079,8 @@ export const storage = {
     const clean = word.trim().toLowerCase();
     if (!clean) return;
     const config = storage.getModerationConfig();
-    if (!config.autoCensorWords.includes(clean)) {
-      config.autoCensorWords.push(clean);
+    if (!config.autoCensorWords || !config.autoCensorWords.includes(clean)) {
+      config.autoCensorWords = [...(config.autoCensorWords || []), clean];
       storage.saveModerationConfig(config);
       storage.logActivity('Censor Word Added', `Added "${clean}" to auto-censor filter`, 'MODERATION', 'Admin');
     }
@@ -1065,8 +1098,8 @@ export const storage = {
     const clean = word.trim().toLowerCase();
     if (!clean) return;
     const config = storage.getModerationConfig();
-    if (!config.blockedWords.includes(clean)) {
-      config.blockedWords.push(clean);
+    if (!config.blockedWords || !config.blockedWords.includes(clean)) {
+      config.blockedWords = [...(config.blockedWords || []), clean];
       storage.saveModerationConfig(config);
       storage.logActivity('Blocked Word Added', `Added "${clean}" to blocked words list`, 'MODERATION', 'Admin');
     }
@@ -1234,10 +1267,10 @@ export const storage = {
       storage.saveUser(user);
 
       const config = storage.getModerationConfig();
-      if (status === 'BANNED' && !config.bannedUserIds.includes(userId)) {
-        config.bannedUserIds.push(userId);
+      if (status === 'BANNED' && (!config.bannedUserIds || !config.bannedUserIds.includes(userId))) {
+        config.bannedUserIds = [...(config.bannedUserIds || []), userId];
         storage.saveModerationConfig(config);
-      } else if (status !== 'BANNED') {
+      } else if (status !== 'BANNED' && config.bannedUserIds) {
         config.bannedUserIds = config.bannedUserIds.filter(id => id !== userId);
         storage.saveModerationConfig(config);
       }
@@ -1257,6 +1290,35 @@ export const storage = {
 
   unbanUser: (userId: string) => {
     storage.updateUserStatus(userId, 'ACTIVE');
+  },
+
+  deleteUser: async (userId: string) => {
+    const users = storage.getAllUsers();
+    const user = users.find(u => u.id === userId);
+    
+    if (user) {
+      // 1. Remove from local storage
+      const filteredUsers = users.filter(u => u.id !== userId);
+      localStorage.setItem(STORAGE_KEYS.REGISTERED_USERS, JSON.stringify(filteredUsers));
+      
+      // 2. Remove their drops
+      const drops = storage.getDrops(true, true);
+      const filteredDrops = drops.filter(d => d.ownerId !== userId);
+      localStorage.setItem(STORAGE_KEYS.DROPS, JSON.stringify(filteredDrops));
+      
+      // 3. Remove their responses
+      const responses = storage.getResponses();
+      const filteredResponses = responses.filter(r => r.userId !== userId);
+      localStorage.setItem(STORAGE_KEYS.RESPONSES, JSON.stringify(filteredResponses));
+
+      // 4. Delete from Supabase
+      await deleteUserFromSupabase(userId);
+
+      storage.logActivity('User Deleted', `Admin menghapus permanen akun ${user.username} (${user.name})`, 'USER', 'Admin');
+      window.dispatchEvent(new Event('storage'));
+      return true;
+    }
+    return false;
   },
 
   // Activity Logs
@@ -1406,9 +1468,23 @@ export const storage = {
   },
 
   updateDailyThisOrThat: (item: DailyThisOrThat) => {
-    localStorage.setItem(STORAGE_KEYS.DAILY_THIS_OR_THAT, JSON.stringify(item));
-    updateDailyThisOrThatInSupabase(item);
-    storage.logActivity('Daily This or That Updated', `Admin memperbarui polling harian: "${item.prompt}"`, 'MODERATION', 'Admin');
+    const current = storage.getDailyThisOrThat();
+    const hasChanged = 
+      current.prompt !== item.prompt || 
+      current.optionA !== item.optionA || 
+      current.optionB !== item.optionB;
+    
+    const finalItem = hasChanged ? {
+      ...item,
+      votesA: 0,
+      votesB: 0,
+      votedUserIds: [],
+      updatedAt: new Date().toISOString()
+    } : item;
+
+    localStorage.setItem(STORAGE_KEYS.DAILY_THIS_OR_THAT, JSON.stringify(finalItem));
+    updateDailyThisOrThatInSupabase(finalItem);
+    storage.logActivity('Daily This or That Updated', `Admin memperbarui polling harian: "${finalItem.prompt}"${hasChanged ? ' (Voting direset)' : ''}`, 'MODERATION', 'Admin');
     window.dispatchEvent(new Event('storage'));
   }
 };
@@ -1417,3 +1493,8 @@ export const storage = {
 setTimeout(() => {
   storage.syncWithSupabase();
 }, 200);
+
+// Periodic sync every 2 minutes
+setInterval(() => {
+  storage.syncWithSupabase();
+}, 2 * 60 * 1000);

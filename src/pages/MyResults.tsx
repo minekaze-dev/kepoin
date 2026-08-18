@@ -17,7 +17,7 @@ export const MyResults = () => {
   const [activeTab, setActiveTab] = useState('All');
 
   useEffect(() => {
-    setDrops(storage.getDrops().filter(d => d.ownerId === 'user_minekaze'));
+    setDrops(storage.getDrops().filter(d => d.ownerId === storage.getUser().id));
   }, []);
 
   const filtered = drops.filter(d => {

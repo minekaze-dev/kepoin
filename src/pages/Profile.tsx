@@ -12,6 +12,7 @@ import { Settings as SettingsIcon, Calendar, ExternalLink, MoreVertical, Trash2,
 import { motion } from 'motion/react';
 
 import { useLanguage } from '../lib/i18n';
+import { Header } from '../components/Header';
 
 export const Profile = () => {
   const { username } = useParams();
@@ -84,6 +85,7 @@ export const Profile = () => {
 
   return (
     <div className="w-full space-y-8">
+      <Header title={lang === 'id' ? 'Profil' : 'Profile'} showSearch={false} />
       {/* Profile Header */}
       <header className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-3xl p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-center md:items-start text-center md:text-left">
@@ -163,17 +165,17 @@ export const Profile = () => {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-[19px] font-bold dark:text-dark-text">
-              {isOwnProfile ? t.profile.recentDrops : `${profileUser.name}'s Drops`}
+              {isOwnProfile ? t.profile.recentDrops : (lang === 'id' ? `Ke-kepoan ${profileUser.name}` : (lang === 'slank' ? `Ke-kepoan ${profileUser.name}` : `${profileUser.name}'s Curiosities`))}
             </h2>
             <span className="text-[13px] text-gray-400 dark:text-dark-muted font-medium">
-              {drops.length} {drops.length === 1 ? 'drop' : 'drops'}
+              {drops.length} {lang === 'id' ? 'Ke-kepoan' : (lang === 'slank' ? 'Ke-kepoan' : (drops.length === 1 ? 'curiosity' : 'curiosities'))}
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {drops.length === 0 ? (
               <div className="col-span-full py-14 text-center text-gray-500 dark:text-dark-muted bg-white dark:bg-dark-surface rounded-2xl border border-dashed border-gray-200 dark:border-dark-border">
-                {lang === 'id' ? 'Belum ada postingan/drop.' : 'No drops yet.'}
+                {t.public.noDrops}
               </div>
             ) : (
               drops.map(drop => (

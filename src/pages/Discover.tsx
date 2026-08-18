@@ -4,12 +4,11 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Header } from '../components/Header';
+import { Search, SlidersHorizontal } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { storage } from '../lib/storage';
-import { DropBoard, ResponseType } from '../types';
-import { NotificationBell } from '../components/NotificationBell';
-
+import { DropBoard } from '../types';
 import { useLanguage } from '../lib/i18n';
 
 export const Discover = () => {
@@ -89,15 +88,7 @@ export const Discover = () => {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-[28px] font-bold text-charcoal dark:text-dark-text tracking-tight">{t.discover.header}</h1>
-          <p className="text-[14px] text-gray-500 dark:text-dark-muted">{t.discover.subtitle}</p>
-        </div>
-        {storage.getIsLoggedIn() && (
-          <NotificationBell />
-        )}
-      </header>
+      <Header title={t.discover.header} subtitle={t.discover.subtitle} showSearch={false} />
 
       <div className="flex flex-col md:flex-row gap-3">
         <div className="relative flex-1">

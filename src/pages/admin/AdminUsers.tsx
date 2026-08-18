@@ -15,7 +15,8 @@ import {
   Clock, 
   ShieldAlert,
   AlertTriangle,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { storage } from '../../lib/storage';
 import { UserProfile } from '../../types';
@@ -27,7 +28,7 @@ export const AdminUsers: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [statusModal, setStatusModal] = useState<{
     user: UserProfile;
-    targetStatus: 'ACTIVE' | 'SUSPENDED' | 'BANNED';
+    targetStatus: 'ACTIVE' | 'SUSPENDED' | 'BANNED' | 'DELETE';
   } | null>(null);
   const [reasonInput, setReasonInput] = useState('');
 
@@ -51,10 +52,16 @@ export const AdminUsers: React.FC = () => {
     return { askCount, answerCount };
   };
 
-  const handleUpdateStatus = () => {
+  const handleUpdateStatus = async () => {
     if (!statusModal) return;
     const { user, targetStatus } = statusModal;
-    storage.updateUserStatus(user.id, targetStatus, reasonInput.trim() || undefined);
+    
+    if (targetStatus === 'DELETE') {
+      await storage.deleteUser(user.id);
+    } else {
+      storage.updateUserStatus(user.id, targetStatus, reasonInput.trim() || undefined);
+    }
+    
     setStatusModal(null);
     setReasonInput('');
     loadUsers();
@@ -288,6 +295,15 @@ export const AdminUsers: React.FC = () => {
                               Unban
                             </button>
                           )}
+
+                          {/* Permanent Delete */}
+                          <button
+                            onClick={() => setStatusModal({ user, targetStatus: 'DELETE' })}
+                            title="Hapus Akun Permanen"
+                            className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -353,17 +369,22 @@ export const AdminUsers: React.FC = () => {
         </div>
       )}
 
-      {/* Change Status Modal (Suspend / Ban / Unban) */}
+      {/* Change Status Modal (Suspend / Ban / Unban / Delete) */}
       {statusModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-400 flex items-center justify-center">
-                <AlertTriangle size={24} />
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                statusModal.targetStatus === 'DELETE' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-400'
+              }`}>
+                {statusModal.targetStatus === 'DELETE' ? <Trash2 size={24} /> : <AlertTriangle size={24} />}
               </div>
               <div>
                 <h3 className="text-base font-black text-white">
-                  Ubah Status Pengguna: {statusModal.targetStatus}
+                  {statusModal.targetStatus === 'DELETE' 
+                    ? 'HAPUS AKUN PERMANEN?' 
+                    : `Ubah Status Pengguna: ${statusModal.targetStatus}`
+                  }
                 </h3>
                 <p className="text-xs text-slate-400">
                   {statusModal.user.name} ({statusModal.user.username})
@@ -371,7 +392,14 @@ export const AdminUsers: React.FC = () => {
               </div>
             </div>
 
-            {statusModal.targetStatus !== 'ACTIVE' && (
+            {statusModal.targetStatus === 'DELETE' ? (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                <p className="text-xs text-red-400 leading-relaxed">
+                  <span className="font-bold block mb-1 uppercase tracking-wider">Peringatan Kritis!</span>
+                  Tindakan ini tidak dapat dibatalkan. Seluruh data profil, Ask, Answer, dan riwayat aktivitas pengguna ini akan dihapus permanen dari server.
+                </p>
+              </div>
+            ) : statusModal.targetStatus !== 'ACTIVE' && (
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                   Alasan Penangguhan / Pemblokiran
@@ -398,9 +426,11 @@ export const AdminUsers: React.FC = () => {
               </button>
               <button
                 onClick={handleUpdateStatus}
-                className="flex-1 py-2.5 rounded-xl bg-[#12A889] hover:bg-orange-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                className={`flex-1 py-2.5 rounded-xl text-white text-xs font-bold transition-colors cursor-pointer ${
+                  statusModal.targetStatus === 'DELETE' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#12A889] hover:bg-emerald-700'
+                }`}
               >
-                Simpan Perubahan
+                {statusModal.targetStatus === 'DELETE' ? 'YA, HAPUS PERMANEN' : 'Simpan Perubahan'}
               </button>
             </div>
           </div>

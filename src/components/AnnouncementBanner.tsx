@@ -5,7 +5,10 @@ import { Announcement } from '../types';
 
 export const AnnouncementBanner: React.FC = () => {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [dismissedIds, setDismissedIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('dismissed_announcements');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     const load = () => {
@@ -24,7 +27,9 @@ export const AnnouncementBanner: React.FC = () => {
   const current = activeAnns[0];
 
   const handleDismiss = (id: string) => {
-    setDismissedIds(prev => [...prev, id]);
+    const newDismissed = [...dismissedIds, id];
+    setDismissedIds(newDismissed);
+    localStorage.setItem('dismissed_announcements', JSON.stringify(newDismissed));
   };
 
   return (

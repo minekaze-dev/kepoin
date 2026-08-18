@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Home, 
   Compass, 
@@ -88,7 +88,7 @@ export const Sidebar = () => {
             to="/" 
             onClick={(e) => { if (!isLoggedIn) { e.preventDefault(); window.dispatchEvent(new Event('open-login-modal')); } }}
           >
-            <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-40 h-auto object-contain" />
+            <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-28 h-auto object-contain" />
           </Link>
         )}
         {isLoggedIn && (
@@ -295,7 +295,15 @@ export const Sidebar = () => {
 
 export const MobileNav = () => {
   const { t } = useLanguage();
+  const location = useLocation();
   const isLoggedIn = storage.getIsLoggedIn();
+
+  // Hide if not logged in
+  if (!isLoggedIn) return null;
+
+  // Hide on public drop pages
+  const isPublicDrop = location.pathname.startsWith('/drop/');
+  if (isPublicDrop) return null;
 
   const handleCreateClick = (e: React.MouseEvent) => {
     if (!isLoggedIn) {
@@ -342,9 +350,6 @@ export const MobileNav = () => {
         >
           <Plus size={26} strokeWidth={3} />
         </NavLink>
-        <span className="text-[9px] font-bold text-[#12A889] dark:text-[#12A889] mt-0.5 tracking-tight">
-          {t.nav.create}
-        </span>
       </div>
 
       <NavLink 

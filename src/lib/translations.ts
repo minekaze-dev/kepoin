@@ -62,9 +62,9 @@ export const translations = {
       descPlaceholder: 'Optional. Add more details about your share...',
       step4: 'Step 4: Settings',
       step5: 'Step 5: Expiration',
-      allowAnon: 'Allow Anonymous',
-      allowReact: 'Allow Reactions',
-      allowTalks: 'Allow Talks',
+      allowAnon: 'Anonymous',
+      allowReact: 'Reactions',
+      allowTalks: 'Talks',
       showPublic: 'Show Responses Publicly',
       submitBtn: 'Ask Something',
       success: 'Your Share is ready',
@@ -175,11 +175,11 @@ export const translations = {
     profile: {
       editBtn: 'Edit Profile',
       joined: 'Joined',
-      recentDrops: 'Recent Shares',
+      recentDrops: 'Curiosities',
       created: 'Created',
       view: 'View',
       stats: {
-        drops: 'Kepoan',
+        drops: 'Curiosities',
         responses: 'Responses',
         saved: 'Saved'
       }
@@ -257,7 +257,7 @@ export const translations = {
       createBtn: 'Tanya Sesuatu →',
       trending: 'Sedang Trending',
       newest: 'Terbaru',
-      recent: 'Share terbaru kamu',
+      recent: 'Ke-kepoan terbaru kamu',
       seeAll: 'Lihat semua',
       viewAll: 'Lihat semua',
       exploreBtn: 'Jelajahi Kepoin →',
@@ -294,9 +294,9 @@ export const translations = {
       descPlaceholder: 'Opsional. Tambahkan detail atau instruksi lebih lanjut...',
       step4: 'Langkah 4: Pengaturan',
       step5: 'Langkah 5: Masa Berlaku',
-      allowAnon: 'Izinkan Anonim',
-      allowReact: 'Izinkan Reaksi',
-      allowTalks: 'Izinkan Obrolan',
+      allowAnon: 'Anonim',
+      allowReact: 'Reaksi',
+      allowTalks: 'Obrolan',
       showPublic: 'Tampilkan Jawaban Secara Publik',
       submitBtn: 'Tanya Sesuatu',
       success: 'Ke-kepoan Kamu Sudah Siap!',
@@ -351,7 +351,7 @@ export const translations = {
       community: 'Apa Yang Mereka Bagikan',
       recentFirst: 'Terbaru',
       topLiked: 'Paling Disukai',
-      noDrops: 'Belum ada Kepoan. Jadilah yang pertama!',
+      noDrops: 'Belum ada Ke-kepoan.',
       notFound: 'Konten tidak ditemukan.',
       modalTitle: 'Ikut Bagikan',
       modalAnon: 'Anonim',
@@ -393,7 +393,7 @@ export const translations = {
     myResults: {
       header: 'Ke-kepoan Kamu',
       subtitle: 'Pantau dan kelola semua yang sudah kamu bagikan.',
-      noDrops: 'Tidak ada Kepoan yang ditemukan di kategori ini.',
+      noDrops: 'Belum ada Ke-kepoan yang ditemukan di kategori ini.',
       created: 'Dibuat pada'
     },
     saved: {
@@ -407,11 +407,11 @@ export const translations = {
     profile: {
       editBtn: 'Edit Profil',
       joined: 'Bergabung sejak',
-      recentDrops: 'Kepoan Baru',
+      recentDrops: 'Ke-kepoan',
       created: 'Dibuat pada',
       view: 'Lihat',
       stats: {
-        drops: 'Kepoan',
+        drops: 'Ke-kepoan',
         responses: 'Jawaban',
         saved: 'Tersimpan'
       }
@@ -489,7 +489,7 @@ export const translations = {
       createBtn: 'Nanya dong →',
       trending: 'Lagi Rame',
       newest: 'Paling Baru',
-      recent: 'Updatean lu',
+      recent: 'Ke-kepoan terbaru lu',
       seeAll: 'Liat semua',
       viewAll: 'Liat semua',
       exploreBtn: 'Jelajahi Kepoin →',
@@ -526,9 +526,9 @@ export const translations = {
       descPlaceholder: 'Tambahin detail atau instruksi...',
       step4: 'Langkah 4: Setelan',
       step5: 'Langkah 5: Masa Berlaku',
-      allowAnon: 'Izinin Anonim',
-      allowReact: 'Izinin Reaksi',
-      allowTalks: 'Izinin Obrolan',
+      allowAnon: 'Anonim',
+      allowReact: 'Reaksi',
+      allowTalks: 'Obrolan',
       showPublic: 'Tampilin Jawaban Publik',
       submitBtn: 'Nanya dong',
       success: 'Ke-kepoan Lu Siap!',
@@ -586,7 +586,7 @@ export const translations = {
       community: 'Yang Mereka Bagiin',
       recentFirst: 'Terbaru',
       topLiked: 'Paling Disuka',
-      noDrops: 'Belum ada Kepoan. Lu yang pertama!',
+      noDrops: 'Belum ada Ke-kepoan.',
       notFound: 'Konten kagak ada.',
       modalTitle: 'Ikut Bagiin',
       modalAnon: 'Anonim',
@@ -628,7 +628,7 @@ export const translations = {
     myResults: {
       header: 'Ke-kepoan Lu',
       subtitle: 'Pantau semua yang udah lu bagiin.',
-      noDrops: 'Data kagak ada di kategori ini.',
+      noDrops: 'Belum ada Ke-kepoan di kategori ini.',
       created: 'Dibuat pada'
     },
     saved: {
@@ -642,11 +642,11 @@ export const translations = {
     profile: {
       editBtn: 'Edit Profil',
       joined: 'Join sejak',
-      recentDrops: 'Kepoan Baru',
+      recentDrops: 'Ke-kepoan',
       created: 'Dibuat pada',
       view: 'Liat',
       stats: {
-        drops: 'Kepoan',
+        drops: 'Ke-kepoan',
         responses: 'Jawaban',
         saved: 'Tersimpan'
       }

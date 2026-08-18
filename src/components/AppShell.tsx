@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, MobileNav } from './Navigation';
 import { LoginModal } from './LoginModal';
+import { storage } from '../lib/storage';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -15,6 +16,9 @@ export const AppShell = ({ children }: AppShellProps) => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   useEffect(() => {
+    // Sync with Supabase on app start
+    storage.syncWithSupabase();
+
     const handleOpenLogin = () => setIsLoginOpen(true);
     window.addEventListener('open-login-modal', handleOpenLogin);
     return () => window.removeEventListener('open-login-modal', handleOpenLogin);
