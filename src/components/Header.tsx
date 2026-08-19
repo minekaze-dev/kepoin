@@ -52,7 +52,7 @@ export const Header = ({ title, subtitle, bannerTitle, showSearch = true }: Head
           ) : (
             <div className="block md:hidden">
               <Link to="/">
-                <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-36 h-auto object-contain -ml-1" />
+                <img src="https://imgur.com/5S09m0f.jpg" alt="Kepoin" className="w-40 h-auto object-contain -ml-1" />
               </Link>
             </div>
           )}

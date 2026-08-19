@@ -292,7 +292,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
         {/* Branding & Subtitle */}
         <div className="text-center space-y-1 pt-1">
           <div className="flex justify-center mx-auto">
-            <img src="https://imgur.com/nuEi5Xj.jpg" alt="Kepoin" className="w-40 h-auto object-contain" />
+            <img src="https://imgur.com/5S09m0f.jpg" alt="Kepoin" className="w-48 h-auto object-contain" />
           </div>
           <p className="text-[12px] text-gray-500 dark:text-dark-muted px-2">
             {mode === 'login' && t.loginModal.subtitle}
