@@ -10,12 +10,12 @@
       (function() {
         try {
           var saved = localStorage.getItem('dropin-theme');
-          if (saved === 'light') {
-            document.documentElement.classList.remove('dark');
-            document.documentElement.classList.add('light');
-          } else {
+          if (saved === 'dark') {
             document.documentElement.classList.remove('light');
             document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.classList.add('light');
           }
         } catch (e) {}
       })();

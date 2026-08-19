@@ -14,8 +14,8 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>(() => {
     const savedTheme = localStorage.getItem('dropin-theme');
-    if (savedTheme === 'light') return 'light';
-    return 'dark'; // Default strictly to dark mode
+    if (savedTheme === 'dark') return 'dark';
+    return 'light'; // Default to light mode for first-time visitors
   });
 
   useEffect(() => {
