@@ -252,6 +252,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       // Save user to Supabase table and local cache
       storage.saveUser(newUser);
       storage.setIsLoggedIn(true);
+      localStorage.setItem('kepoin_needs_onboarding', 'true');
       await storage.syncWithSupabase();
       onClose();
       window.location.reload();

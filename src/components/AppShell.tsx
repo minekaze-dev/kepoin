@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar, MobileNav } from './Navigation';
 import { LoginModal } from './LoginModal';
+import { OnboardingModal } from './OnboardingModal';
 import { storage } from '../lib/storage';
 
 interface AppShellProps {
@@ -34,6 +35,7 @@ export const AppShell = ({ children }: AppShellProps) => {
       </main>
       <MobileNav />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} />
+      <OnboardingModal />
     </div>
   );
 };
