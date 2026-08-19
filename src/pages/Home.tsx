@@ -737,7 +737,7 @@ export const Home = () => {
               {lang === 'id' ? 'Penasaran? Gabung sekarang.' : 'Curious? Join now.'}
             </p>
           </div>
-          <div className="bg-white/10 dark:bg-[#12A889] group-hover:bg-white/20 dark:group-hover:bg-orange-700 text-white px-5 py-2.5 rounded-lg text-[14px] font-bold transition-all self-start sm:self-center shrink-0">
+          <div className="bg-gradient-to-r from-[#12A889] to-blue-600 group-hover:opacity-95 text-white px-5 py-2.5 rounded-lg text-[14px] font-bold transition-all self-start sm:self-center shrink-0 shadow-sm">
             {t.home.exploreBtn}
           </div>
         </div>

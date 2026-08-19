@@ -125,7 +125,7 @@ export const Discover = () => {
             className={`
               whitespace-nowrap px-4 py-1.5 rounded-full text-[13px] font-medium transition-all
               ${activeTab === tab.key 
-                ? 'bg-charcoal dark:bg-[#12A889] text-white' 
+                ? 'bg-gradient-to-r from-[#12A889] to-blue-600 text-white shadow-sm' 
                 : 'bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border text-gray-500 dark:text-dark-muted hover:border-gray-200 dark:hover:border-dark-muted'}
             `}
           >
