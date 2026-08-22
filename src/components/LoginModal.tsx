@@ -235,7 +235,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       const cleanEmail = email.trim().toLowerCase();
 
       // Sign up with Supabase Auth
-      const { error: authError } = await supabase.auth.signUp({
+      const { data: authResult, error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: {
@@ -247,6 +247,26 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       });
 
       if (authError) throw authError;
+
+      // Save user to Supabase table
+      if (authResult?.user) {
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: authResult.user.id,
+            name: cleanName,
+            username: cleanUsername,
+            email: cleanEmail,
+            role: 'USER',
+            status: 'ACTIVE',
+            joined_at: new Date().toISOString(),
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          // Optionally handle this error, maybe delete the auth user?
+        }
+      }
 
       // DO NOT log in or save locally. Show confirmation message
       setErrorMessage(lang === 'id'
@@ -329,7 +349,11 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
 
         {/* Error Notification */}
         {errorMessage && (
-          <div className="p-2.5 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl flex items-center gap-2 text-[12px] text-red-600 dark:text-red-400">
+          <div className={`p-2.5 border rounded-xl flex items-center gap-2 text-[12px] ${
+            errorMessage.includes('berhasil') || errorMessage.includes('successful') 
+            ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400' 
+            : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-400'
+          }`}>
             <AlertCircle size={15} className="shrink-0" />
             <span>{errorMessage}</span>
           </div>
