@@ -9,7 +9,7 @@ import { Bell, CheckCheck, MessageCircle, MessageSquare, AtSign, Flame, Clock, A
 import { storage } from '../lib/storage';
 import { AppNotification, NotificationPriority } from '../types';
 import { useLanguage } from '../lib/i18n';
-import { supabase } from '../lib/supabase';
+import { supabase, fetchNotificationsFromSupabase } from '../lib/supabase';
 
 export const NotificationBell: React.FC = () => {
   const { lang } = useLanguage();
@@ -20,12 +20,23 @@ export const NotificationBell: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<'ALL' | 'HIGH' | 'REACTION' | 'INFO'>('ALL');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const loadNotifications = () => {
+  const loadNotifications = async () => {
     if (!storage.getIsLoggedIn()) {
       setNotifications([]);
       setUnreadCount(0);
       return;
     }
+    
+    const userId = storage.getUser()?.id;
+    if (userId) {
+      // Try to fetch latest from Supabase and update local storage
+      const remote = await fetchNotificationsFromSupabase(userId);
+      if (remote) {
+        localStorage.setItem('dropboard_notifications_v5', JSON.stringify(remote));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+
     const list = storage.getNotifications();
     setNotifications(list);
     setUnreadCount(list.filter(n => !n.read).length);
