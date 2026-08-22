@@ -277,7 +277,7 @@ export const Settings = () => {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-[13px] font-bold transition-all shadow-xs cursor-pointer w-full"
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-[13px] font-bold transition-all shadow-xs cursor-pointer w-full md:hidden"
                   >
                     <LogOut size={16} />
                     <span>{lang === 'id' ? 'Keluar' : 'Log Out'}</span>
