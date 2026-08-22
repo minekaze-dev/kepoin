@@ -248,26 +248,6 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
 
       if (authError) throw authError;
 
-      // Save user to Supabase table
-      if (authResult?.user) {
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authResult.user.id,
-            name: cleanName,
-            username: cleanUsername,
-            email: cleanEmail,
-            role: 'USER',
-            status: 'ACTIVE',
-            joined_at: new Date().toISOString(),
-          });
-
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-          // Optionally handle this error, maybe delete the auth user?
-        }
-      }
-
       // DO NOT log in or save locally. Show confirmation message
       setErrorMessage(lang === 'id'
         ? 'Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun sebelum masuk.'
