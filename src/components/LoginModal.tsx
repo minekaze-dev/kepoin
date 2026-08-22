@@ -202,7 +202,13 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     }
 
     // Check if username is already taken by any user
-    if (storage.isUsernameTaken(cleanUsername)) {
+    const { data: takenUser, error: takenError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('username', cleanUsername)
+      .single();
+
+    if (!takenError && takenUser) {
       setErrorMessage(lang === 'id'
         ? `Username ${cleanUsername} sudah digunakan oleh pengguna lain. Silakan pilih username yang berbeda!`
         : `Username ${cleanUsername} is already taken by another user. Please choose a different one!`);
