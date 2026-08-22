@@ -82,7 +82,7 @@ export const AdminUsers: React.FC = () => {
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 7);
     
-    if (selectedDate < new Date().setHours(0,0,0,0)) {
+    if (selectedDate.getTime() < new Date().setHours(0,0,0,0)) {
        alert('Tanggal expired tidak boleh masa lalu!');
        return;
     }

@@ -9,6 +9,7 @@ import { Bell, CheckCheck, MessageCircle, MessageSquare, AtSign, Flame, Clock, A
 import { storage } from '../lib/storage';
 import { AppNotification, NotificationPriority } from '../types';
 import { useLanguage } from '../lib/i18n';
+import { supabase } from '../lib/supabase';
 
 export const NotificationBell: React.FC = () => {
   const { lang } = useLanguage();
