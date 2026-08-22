@@ -695,3 +695,30 @@ export async function insertNotificationToSupabase(notif: AppNotification): Prom
     return false;
   }
 }
+
+export async function updateNotificationReadStatusInSupabase(id: string, isRead: boolean): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: isRead })
+      .eq('id', id);
+    return !error;
+  } catch (err) {
+    console.error('Error updating notification read status in Supabase:', err);
+    return false;
+  }
+}
+
+export async function markAllNotificationsAsReadInSupabase(userId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', userId)
+      .eq('is_read', false);
+    return !error;
+  } catch (err) {
+    console.error('Error marking all notifications as read in Supabase:', err);
+    return false;
+  }
+}

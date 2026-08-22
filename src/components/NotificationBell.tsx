@@ -92,8 +92,8 @@ export const NotificationBell: React.FC = () => {
     setIsOpen(prev => !prev);
   };
 
-  const handleNotificationClick = (notif: AppNotification) => {
-    storage.markNotificationAsRead(notif.id);
+  const handleNotificationClick = async (notif: AppNotification) => {
+    await storage.markNotificationAsRead(notif.id);
     loadNotifications();
     setIsOpen(false);
     if (notif.linkUrl) {
@@ -101,9 +101,9 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const handleMarkAllAsRead = (e: React.MouseEvent) => {
+  const handleMarkAllAsRead = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    storage.markAllNotificationsAsRead();
+    await storage.markAllNotificationsAsRead();
     loadNotifications();
   };
 

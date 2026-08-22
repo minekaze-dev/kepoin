@@ -49,7 +49,9 @@ import {
   saveUserToSupabase,
   deleteUserFromSupabase,
   fetchNotificationsFromSupabase,
-  insertNotificationToSupabase
+  insertNotificationToSupabase,
+  updateNotificationReadStatusInSupabase,
+  markAllNotificationsAsReadInSupabase
 } from './supabase';
 
 const STORAGE_KEYS = {
@@ -933,21 +935,23 @@ export const storage = {
     });
   },
 
-  markNotificationAsRead: (notificationId: string) => {
+  markNotificationAsRead: async (notificationId: string) => {
     const allNotifs = storage.getAllNotifications();
     const notif = allNotifs.find(n => n.id === notificationId);
     if (notif && !notif.read) {
       notif.read = true;
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
       
-      // Explicitly update Supabase here if needed, or rely on other mechanism
+      // Update Supabase and wait for it to avoid race conditions with loadNotifications
+      await updateNotificationReadStatusInSupabase(notificationId, true);
+      
       // Ensure the event is dispatched
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('notification-updated'));
     }
   },
 
-  markAllNotificationsAsRead: () => {
+  markAllNotificationsAsRead: async () => {
     const currentUserId = storage.getUser()?.id;
     if (!currentUserId) return;
     const allNotifs = storage.getAllNotifications();
@@ -960,6 +964,10 @@ export const storage = {
     });
     if (updated) {
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
+      
+      // Update Supabase and wait for it to avoid race conditions
+      await markAllNotificationsAsReadInSupabase(currentUserId);
+
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('notification-updated'));
     }
