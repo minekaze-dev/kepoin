@@ -13,6 +13,7 @@ import { AnnouncementBanner } from '../components/AnnouncementBanner';
 import { Header } from '../components/Header';
 
 import { useLanguage } from '../lib/i18n';
+import { supabase } from '../lib/supabase';
 
 export const Home = () => {
   const { t, lang, formatRelativeTime, formatTimeLeft, getCategoryLabel, getAnswerCountLabel, getTalkCountLabel } = useLanguage();
@@ -879,20 +880,41 @@ export const Home = () => {
 
         {/* Widget 3: Orang Lagi Kepo */}
         {(() => {
-          const allDropsForKepo = storage.getDrops(true, false);
-          const photoDrops = allDropsForKepo.filter(d => d.type === 'PHOTO');
-          const songDrops = allDropsForKepo.filter(d => d.type === 'SONG');
-          const numberDrops = allDropsForKepo.filter(d => d.type === 'NUMBER');
+          const [kepoStats, setKepoStats] = useState({ photo: 0, song: 0, number: 0, talks: 0 });
 
-          const photoResponses = photoDrops.reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
-          const songResponses = songDrops.reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
-          const numberResponses = numberDrops.reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
-          const totalTalksAll = allDropsForKepo.reduce((acc, d) => acc + getTotalTalks(d.id), 0);
+          useEffect(() => {
+            const fetchKepoStats = async () => {
+              // TODO: Implement actual database query logic here to count real active users/responses
+              // For now, keeping the base logic but structure for real-time reactivity
+              const allDrops = storage.getDrops(true, false);
+              
+              const photoResponses = allDrops.filter(d => d.type === 'PHOTO').reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
+              const songResponses = allDrops.filter(d => d.type === 'SONG').reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
+              const numberResponses = allDrops.filter(d => d.type === 'NUMBER').reduce((acc, d) => acc + storage.getResponses(d.id).length, 0);
+              const totalTalks = allDrops.reduce((acc, d) => acc + getTotalTalks(d.id), 0);
 
-          const activePhoto = 18 + photoDrops.length * 4 + photoResponses * 2;
-          const activeSong = 14 + songDrops.length * 4 + songResponses * 2;
-          const activeNumber = 11 + numberDrops.length * 4 + numberResponses * 2;
-          const activeTalks = 25 + totalTalksAll * 3;
+              setKepoStats({
+                photo: 18 + photoResponses * 2,
+                song: 14 + songResponses * 2,
+                number: 11 + numberResponses * 2,
+                talks: 25 + totalTalks * 3,
+              });
+            };
+
+            fetchKepoStats();
+
+            // Real-time subscription to changes
+            const channel = supabase
+              .channel('public:responses')
+              .on('postgres_changes', { event: '*', schema: 'public', table: 'responses' }, () => {
+                fetchKepoStats();
+              })
+              .subscribe();
+
+            return () => {
+              supabase.removeChannel(channel);
+            };
+          }, []);
 
           return (
             <div className="bg-white dark:bg-dark-surface border border-gray-100 dark:border-dark-border rounded-xl p-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)]">
@@ -905,25 +927,25 @@ export const Home = () => {
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                     <span className="text-[16px]">📸</span>
-                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activePhoto}</strong> {lang === 'en' ? 'viewing Photos' : (lang === 'slank' ? 'lagi liat Foto' : 'sedang lihat Foto')}</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{kepoStats.photo}</strong> {lang === 'en' ? 'viewing Photos' : (lang === 'slank' ? 'lagi liat Foto' : 'sedang lihat Foto')}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                     <span className="text-[16px]">🎵</span>
-                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activeSong}</strong> {lang === 'en' ? 'searching Songs' : (lang === 'slank' ? 'lagi cari Lagu' : 'sedang cari Lagu')}</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{kepoStats.song}</strong> {lang === 'en' ? 'searching Songs' : (lang === 'slank' ? 'lagi cari Lagu' : 'sedang cari Lagu')}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                     <span className="text-[16px]">🔢</span>
-                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activeNumber}</strong> {lang === 'en' ? 'answering Numbers' : (lang === 'slank' ? 'lagi jawab Angka' : 'sedang jawab Angka')}</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{kepoStats.number}</strong> {lang === 'en' ? 'answering Numbers' : (lang === 'slank' ? 'lagi jawab Angka' : 'sedang jawab Angka')}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between group">
                   <div className="flex items-center gap-3 text-[13px] font-medium text-gray-600 dark:text-dark-muted">
                     <span className="text-[16px]">💬</span>
-                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{activeTalks}</strong> {lang === 'en' ? 'chatting in talks' : (lang === 'slank' ? 'lagi ngobrol' : 'sedang ngobrol')}</span>
+                    <span><strong className="text-gray-900 dark:text-dark-text group-hover:text-[#12A889] transition-colors">{kepoStats.talks}</strong> {lang === 'en' ? 'chatting in talks' : (lang === 'slank' ? 'lagi ngobrol' : 'sedang ngobrol')}</span>
                   </div>
                 </div>
               </div>

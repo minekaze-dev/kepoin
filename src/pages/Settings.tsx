@@ -259,33 +259,8 @@ export const Settings = () => {
             </div>
           </section>
 
-          {isLoggedIn && (
-            <section className="space-y-4">
-              <h2 className="text-[16px] font-bold uppercase tracking-wider text-red-500">
-                {lang === 'id' ? 'Akun & Sesi' : 'Account & Session'}
-              </h2>
-              <div className="bg-white dark:bg-dark-surface border border-red-100 dark:border-red-950/40 rounded-2xl p-6 shadow-sm">
-                <div className="flex flex-col justify-between gap-4">
-                  <div>
-                    <p className="text-[14px] font-bold text-gray-900 dark:text-dark-text">
-                      {lang === 'id' ? 'Keluar dari Akun' : 'Log Out of Account'}
-                    </p>
-                    <p className="text-[12px] text-gray-400 dark:text-dark-muted">
-                      {lang === 'id' ? 'Keluar dari sesi akun aktif kamu di perangkat ini.' : 'Sign out of your active account session on this device.'}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/50 rounded-xl text-[13px] font-bold transition-all shadow-xs cursor-pointer w-full md:hidden"
-                  >
-                    <LogOut size={16} />
-                    <span>{lang === 'id' ? 'Keluar' : 'Log Out'}</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
+          {/* Section Removed */}
+          
         </div>
       </div>
     </div>

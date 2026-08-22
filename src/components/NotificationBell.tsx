@@ -40,9 +40,18 @@ export const NotificationBell: React.FC = () => {
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('notification-updated', handleUpdate);
 
+    // Real-time listener
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, () => {
+        handleUpdate();
+      })
+      .subscribe();
+
     return () => {
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('notification-updated', handleUpdate);
+      supabase.removeChannel(channel);
     };
   }, []);
 
