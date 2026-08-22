@@ -939,6 +939,9 @@ export const storage = {
     if (notif && !notif.read) {
       notif.read = true;
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(allNotifs));
+      
+      // Explicitly update Supabase here if needed, or rely on other mechanism
+      // Ensure the event is dispatched
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('notification-updated'));
     }
