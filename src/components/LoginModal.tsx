@@ -30,6 +30,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
   const [resetSent, setResetSent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isRegistrationSuccess, setIsRegistrationSuccess] = useState(false);
 
   if (!isOpen) return null;
 
@@ -42,6 +43,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
     setResetSent(false);
     setErrorMessage('');
     setIsLoading(false);
+    setIsRegistrationSuccess(false);
   };
 
   const handleModeChange = (newMode: ModalMode) => {
@@ -249,6 +251,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       if (authError) throw authError;
 
       // DO NOT log in or save locally. Show confirmation message
+      setIsRegistrationSuccess(true);
       setErrorMessage(lang === 'id'
         ? 'Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun sebelum masuk.'
         : 'Registration successful! Please check your email to confirm your account before logging in.');
