@@ -76,7 +76,13 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
         password: pass,
       });
 
-      if (!authError && authData.user) {
+      if (authError) {
+        setErrorMessage(lang === 'id' ? 'Email atau kata sandi salah' : 'Invalid email or password');
+        setIsLoading(false);
+        return;
+      }
+      
+      if (authData.user) {
         // Fetch or create profile
         const { data: profile } = await supabase
           .from('users')

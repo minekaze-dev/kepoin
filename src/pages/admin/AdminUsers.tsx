@@ -82,45 +82,54 @@ export const AdminUsers: React.FC = () => {
     const maxDate = new Date();
     maxDate.setDate(maxDate.getDate() + 7);
     
+    if (selectedDate < new Date().setHours(0,0,0,0)) {
+       alert('Tanggal expired tidak boleh masa lalu!');
+       return;
+    }
+
     if (selectedDate > maxDate) {
       alert('Masa expired maksimal 7 hari dari sekarang!');
       return;
     }
 
-    // Logic to save user and drop (using storage)
-    const newUserId = `tester_${Date.now()}`;
-    const newUser = {
-      id: newUserId,
-      name: testerData.name,
-      username: testerData.username.startsWith('@') ? testerData.username : `@${testerData.username}`,
-      status: 'ACTIVE' as const,
-      role: 'USER' as const,
-      joinedAt: new Date().toISOString(),
-      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${testerData.username}`
-    };
+    // Process multiple testers separated by comma
+    const usernames = testerData.username.split(',').map(u => u.trim());
     
-    storage.saveUser(newUser);
-    
-    // Create Drop
-    const newDrop = {
-      id: `drop_${Date.now()}`,
-      ownerId: newUserId,
-      content: testerData.content,
-      expiresAt: testerData.expiresAt,
-      createdAt: new Date().toISOString()
-    };
-    
-    // Assuming storage has a saveDrop method. If not, this needs adjustment based on actual storage implementation.
-    // @ts-ignore
-    if (typeof storage.saveDrop === 'function') {
-      // @ts-ignore
-      storage.saveDrop(newDrop);
-    }
+    usernames.forEach(username => {
+        const cleanUsername = username.startsWith('@') ? username : `@${username}`;
+        const newUserId = `tester_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newUser = {
+          id: newUserId,
+          name: testerData.name,
+          username: cleanUsername,
+          status: 'ACTIVE' as const,
+          role: 'USER' as const,
+          joinedAt: new Date().toISOString(),
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`
+        };
+        
+        storage.saveUser(newUser);
+        
+        // Create Drop
+        const newDrop = {
+          id: `drop_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          ownerId: newUserId,
+          content: testerData.content,
+          expiresAt: testerData.expiresAt,
+          createdAt: new Date().toISOString()
+        };
+        
+        // @ts-ignore
+        if (typeof storage.saveDrop === 'function') {
+          // @ts-ignore
+          storage.saveDrop(newDrop);
+        }
+    });
     
     setIsTesterModalOpen(false);
     setTesterData({ name: '', username: '', content: '', expiresAt: '' });
     loadUsers();
-    alert('Akun tester berhasil dibuat!');
+    alert(`Berhasil membuat ${usernames.length} akun tester!`);
   };
 
   const filteredUsers = users.filter((user) => {

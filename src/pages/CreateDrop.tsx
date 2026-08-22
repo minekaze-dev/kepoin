@@ -62,6 +62,8 @@ export const CreateDrop = () => {
     if (isLoggedIn) {
       if (settings.expiration === '1 hour') expirationMs = 60 * 60 * 1000;
       else if (settings.expiration === '1 day') expirationMs = 24 * 60 * 60 * 1000;
+      else if (settings.expiration === '3 days') expirationMs = 3 * 24 * 60 * 60 * 1000;
+      else if (settings.expiration === '7 days') expirationMs = 7 * 24 * 60 * 60 * 1000;
     }
     
     const newDrop: DropBoard = {
@@ -378,6 +380,7 @@ export const CreateDrop = () => {
                 <option value="1 hour">{t.create.exp.h1}</option>
                 <option value="1 day">{t.create.exp.d1}</option>
                 <option value="3 days">{t.create.exp.d3}</option>
+                <option value="7 days">{t.create.exp.d7}</option>
               </select>
             </div>
             <p className="text-[12px] text-gray-500 dark:text-dark-muted flex items-center gap-1.5 px-1">

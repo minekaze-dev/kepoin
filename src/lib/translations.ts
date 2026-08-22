@@ -89,7 +89,10 @@ export const translations = {
       exp: {
         h1: '1 Hour',
         d1: '1 Day',
-        d3: '3 Days'
+        d3: '3 Days',
+        d7: '7 Days',
+        d7: '7 Days',
+        d7: '7 Days'
       }
     },
     discover: {
