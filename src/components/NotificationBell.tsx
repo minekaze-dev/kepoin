@@ -31,8 +31,12 @@ export const NotificationBell: React.FC = () => {
       // Try to fetch latest from Supabase and update local storage
       const remote = await fetchNotificationsFromSupabase(userId);
       if (remote) {
-        localStorage.setItem('dropboard_notifications_v5', JSON.stringify(remote));
-        window.dispatchEvent(new Event('storage'));
+        const remoteStr = JSON.stringify(remote);
+        const localStr = localStorage.getItem('dropboard_notifications_v5');
+        if (remoteStr !== localStr) {
+          localStorage.setItem('dropboard_notifications_v5', remoteStr);
+          window.dispatchEvent(new Event('storage'));
+        }
       }
     }
 
@@ -51,6 +55,11 @@ export const NotificationBell: React.FC = () => {
     window.addEventListener('storage', handleUpdate);
     window.addEventListener('notification-updated', handleUpdate);
 
+    // Reliable fallback polling (checks every 5 seconds)
+    const pollInterval = setInterval(() => {
+      loadNotifications();
+    }, 5000);
+
     // Real-time listener
     const channel = supabase
       .channel('public:notifications')
@@ -62,6 +71,7 @@ export const NotificationBell: React.FC = () => {
     return () => {
       window.removeEventListener('storage', handleUpdate);
       window.removeEventListener('notification-updated', handleUpdate);
+      clearInterval(pollInterval);
       supabase.removeChannel(channel);
     };
   }, []);

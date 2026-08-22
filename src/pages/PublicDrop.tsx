@@ -32,6 +32,7 @@ import {
 import { storage } from '../lib/storage';
 import { DropBoard, DropResponse, ResponseType } from '../types';
 import { useLanguage } from '../lib/i18n';
+import { fetchResponsesFromSupabase } from '../lib/supabase';
 
 const DROP_REACTION_EMOJIS = ['❤️', '😂', '🔥', '👀', '👍'];
 const ANSWER_REACTION_EMOJIS = ['❤️'];
@@ -61,6 +62,48 @@ export const PublicDrop = () => {
       setDropUserReactions(userReactions[foundDrop.id] || []);
     }
   }, [slug]);
+
+  // Poll responses every 3 seconds to show new comments & replies in real-time
+  useEffect(() => {
+    if (!drop) return;
+
+    const pollResponses = async () => {
+      try {
+        const remote = await fetchResponsesFromSupabase();
+        if (remote) {
+          const filtered = remote.filter(r => r.dropId === drop.id);
+          
+          // Check if anything has actually changed to prevent unnecessary re-renders
+          const remoteStr = JSON.stringify(filtered);
+          const currentStr = JSON.stringify(responses);
+          
+          if (remoteStr !== currentStr) {
+            // Update local storage so that other components have the synced state
+            const allResponses = storage.getResponses();
+            const remoteIds = new Set(filtered.map(r => r.id));
+            const merged = [
+              ...filtered,
+              ...allResponses.filter(r => r.dropId !== drop.id || !remoteIds.has(r.id))
+            ];
+            localStorage.setItem('dropboard_responses_v6', JSON.stringify(merged));
+            
+            // Dispatch standard storage event to sync other open tabs
+            window.dispatchEvent(new Event('storage'));
+            
+            setResponses(filtered);
+          }
+        }
+      } catch (err) {
+        console.error('Error polling responses from Supabase:', err);
+      }
+    };
+
+    // Initial check
+    pollResponses();
+
+    const interval = setInterval(pollResponses, 3000);
+    return () => clearInterval(interval);
+  }, [drop, responses]);
 
   const isExpired = drop ? storage.isDropExpired(drop) : false;
 
