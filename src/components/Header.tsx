@@ -15,6 +15,7 @@ interface HeaderProps {
   title?: string;
   subtitle?: string;
   bannerTitle?: string;
+  showSearch?: boolean;
 }
 
 export const Header = ({ title, subtitle, bannerTitle }: HeaderProps) => {

@@ -17,7 +17,6 @@ export const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [activeFilter, setActiveFilter] = useState<'ALL' | 'HIGH' | 'REACTION' | 'INFO'>('ALL');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const loadNotifications = async () => {
@@ -181,13 +180,7 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const filteredNotifications = notifications.filter(n => {
-    if (activeFilter === 'ALL') return true;
-    if (activeFilter === 'HIGH') return n.priority === 'HIGH' || n.type === 'MENTION' || n.type === 'ANSWER' || n.type === 'TALK';
-    if (activeFilter === 'REACTION') return n.priority === 'MEDIUM' || n.type === 'REACTION' || n.type === 'REACTION_DROP' || n.type === 'REACTION_ANSWER';
-    if (activeFilter === 'INFO') return n.priority === 'INFO' || n.type === 'EXPIRED' || n.type === 'EXPIRING_1H' || n.type === 'EXPIRING_12H';
-    return true;
-  });
+  const filteredNotifications = notifications;
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -213,7 +206,7 @@ export const NotificationBell: React.FC = () => {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-[340px] sm:w-[380px] bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           {/* Header */}
-          <div className="px-4 pt-3.5 pb-2.5 border-b border-gray-100 dark:border-dark-border bg-gray-50/80 dark:bg-dark-bg/60">
+          <div className="px-4 py-3.5 border-b border-gray-100 dark:border-dark-border bg-gray-50/80 dark:bg-dark-bg/60">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-[15px] text-gray-900 dark:text-dark-text">
@@ -238,54 +231,6 @@ export const NotificationBell: React.FC = () => {
                   <span>{lang === 'id' ? 'Tandai dibaca' : 'Mark all read'}</span>
                 </button>
               )}
-            </div>
-
-            {/* Filter Tabs (Rule 15: Prioritas) */}
-            <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto pb-0.5 scrollbar-none">
-              <button
-                type="button"
-                onClick={() => setActiveFilter('ALL')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shrink-0 ${
-                  activeFilter === 'ALL'
-                    ? 'bg-white dark:bg-dark-surface text-[#12A889] shadow-xs border border-gray-200 dark:border-dark-border'
-                    : 'text-gray-500 dark:text-dark-muted hover:text-gray-900 dark:hover:text-dark-text'
-                }`}
-              >
-                {lang === 'id' ? 'Semua' : 'All'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter('HIGH')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shrink-0 ${
-                  activeFilter === 'HIGH'
-                    ? 'bg-white dark:bg-dark-surface text-purple-600 shadow-xs border border-gray-200 dark:border-dark-border'
-                    : 'text-gray-500 dark:text-dark-muted hover:text-gray-900 dark:hover:text-dark-text'
-                }`}
-              >
-                {lang === 'id' ? 'Utama' : 'Priority'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter('REACTION')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shrink-0 ${
-                  activeFilter === 'REACTION'
-                    ? 'bg-white dark:bg-dark-surface text-amber-600 shadow-xs border border-gray-200 dark:border-dark-border'
-                    : 'text-gray-500 dark:text-dark-muted hover:text-gray-900 dark:hover:text-dark-text'
-                }`}
-              >
-                {lang === 'id' ? 'Reaksi' : 'Reactions'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveFilter('INFO')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-colors shrink-0 ${
-                  activeFilter === 'INFO'
-                    ? 'bg-white dark:bg-dark-surface text-orange-600 shadow-xs border border-gray-200 dark:border-dark-border'
-                    : 'text-gray-500 dark:text-dark-muted hover:text-gray-900 dark:hover:text-dark-text'
-                }`}
-              >
-                {lang === 'id' ? 'Info' : 'Info'}
-              </button>
             </div>
           </div>
 

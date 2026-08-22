@@ -10,6 +10,9 @@ export interface Talk {
   userName: string;
   content: string;
   createdAt: string;
+  userId?: string;
+  avatar?: string;
+  isAnonymous?: boolean;
 }
 
 export interface DropBoard {

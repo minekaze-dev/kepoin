@@ -729,6 +729,7 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                           avatar: isTalkAnon ? undefined : (currentUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.name}`),
                           content: text,
                           isAnonymous: isTalkAnon,
+                          userId: isTalkAnon ? undefined : currentUser.id,
                           createdAt: new Date().toISOString()
                         };
                         const updatedResponse = { ...localResponse, talks: [...(localResponse.talks || []), newTalk] };
@@ -736,21 +737,67 @@ const ResponseCard = ({ response, drop, type, isOwner, onPhotoClick, allowTalks 
                         setLocalResponse(updatedResponse);
 
                         if (drop) {
-                          // Rule 2: TALK / OBROLAN notification to Drop Owner
                           const actorDisplayName = isTalkAnon ? (lang === 'id' ? 'Seseorang (Anonim)' : 'Someone (Anonymous)') : currentUser.name;
-                          storage.addNotification({
-                            userId: drop.ownerId,
-                            actorName: actorDisplayName,
-                            actorAvatar: isTalkAnon ? undefined : currentUser.avatar,
-                            type: 'TALK',
-                            message: lang === 'id' ? 'ikut ngobrol di pertanyaanmu.' : 'joined the talk on your question.',
-                            dropId: drop.id,
-                            dropSlug: drop.slug,
-                            dropPrompt: drop.prompt,
-                            responseId: response.id,
-                            talkId: newTalk.id,
-                            priority: 'HIGH',
-                            linkUrl: `/drop/${drop.slug}`
+                          
+                          // 1. Notify Response/Answer Owner (if it's not the commenter themselves)
+                          if (response.userId && response.userId !== currentUser.id) {
+                            storage.addNotification({
+                              userId: response.userId,
+                              actorName: actorDisplayName,
+                              actorAvatar: isTalkAnon ? undefined : currentUser.avatar,
+                              type: 'TALK',
+                              message: lang === 'id' ? 'ikut mengomentari jawabanmu.' : 'commented on your answer.',
+                              dropId: drop.id,
+                              dropSlug: drop.slug,
+                              dropPrompt: drop.prompt,
+                              responseId: response.id,
+                              talkId: newTalk.id,
+                              priority: 'HIGH',
+                              linkUrl: `/drop/${drop.slug}`
+                            });
+                          }
+
+                          // 2. Notify Board/Question Owner (if it's not the commenter and not already the response owner to avoid double notifications)
+                          if (drop.ownerId !== currentUser.id && drop.ownerId !== response.userId) {
+                            storage.addNotification({
+                              userId: drop.ownerId,
+                              actorName: actorDisplayName,
+                              actorAvatar: isTalkAnon ? undefined : currentUser.avatar,
+                              type: 'TALK',
+                              message: lang === 'id' ? 'ikut ngobrol di pertanyaanmu.' : 'joined the talk on your question.',
+                              dropId: drop.id,
+                              dropSlug: drop.slug,
+                              dropPrompt: drop.prompt,
+                              responseId: response.id,
+                              talkId: newTalk.id,
+                              priority: 'HIGH',
+                              linkUrl: `/drop/${drop.slug}`
+                            });
+                          }
+
+                          // 3. Notify other participants who have commented in this thread
+                          const otherParticipantIds = new Set<string>();
+                          (localResponse.talks || []).forEach(t => {
+                            if (t.userId && t.userId !== currentUser.id && t.userId !== response.userId && t.userId !== drop.ownerId) {
+                              otherParticipantIds.add(t.userId);
+                            }
+                          });
+
+                          otherParticipantIds.forEach(pId => {
+                            storage.addNotification({
+                              userId: pId,
+                              actorName: actorDisplayName,
+                              actorAvatar: isTalkAnon ? undefined : currentUser.avatar,
+                              type: 'TALK',
+                              message: lang === 'id' ? 'juga ikut meramaikan obrolan.' : 'also joined the talk.',
+                              dropId: drop.id,
+                              dropSlug: drop.slug,
+                              dropPrompt: drop.prompt,
+                              responseId: response.id,
+                              talkId: newTalk.id,
+                              priority: 'HIGH',
+                              linkUrl: `/drop/${drop.slug}`
+                            });
                           });
 
                           // Rule 5: MENTION notification
