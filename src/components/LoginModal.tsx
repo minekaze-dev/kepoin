@@ -223,7 +223,7 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
       const cleanEmail = email.trim().toLowerCase();
 
       // Sign up with Supabase Auth
-      const { data: authResult, error: authError } = await supabase.auth.signUp({
+      const { error: authError } = await supabase.auth.signUp({
         email: cleanEmail,
         password: password,
         options: {
@@ -234,28 +234,13 @@ export const LoginModal = ({ isOpen, onClose }: LoginModalProps) => {
         }
       });
 
-      const userId = authResult?.user?.id || `user_${Date.now()}`;
-      
-      const newUser = {
-        id: userId,
-        name: cleanName,
-        username: cleanUsername,
-        email: cleanEmail,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${usernameBody}`,
-        bio: `Hello! I'm ${cleanName} on Kepoin.`,
-        joinedAt: new Date().toISOString(),
-        usernameLastChangedAt: new Date().toISOString(),
-        role: 'USER' as const,
-        status: 'ACTIVE' as const
-      };
+      if (authError) throw authError;
 
-      // Save user to Supabase table and local cache
-      storage.saveUser(newUser);
-      storage.setIsLoggedIn(true);
-      localStorage.setItem('kepoin_needs_onboarding', 'true');
-      await storage.syncWithSupabase();
-      onClose();
-      window.location.reload();
+      // DO NOT log in or save locally. Show confirmation message
+      setErrorMessage(lang === 'id'
+        ? 'Pendaftaran berhasil! Silakan periksa email Anda untuk konfirmasi akun sebelum masuk.'
+        : 'Registration successful! Please check your email to confirm your account before logging in.');
+      
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal mendaftar akun.');
     } finally {

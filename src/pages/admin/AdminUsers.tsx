@@ -16,7 +16,8 @@ import {
   ShieldAlert,
   AlertTriangle,
   X,
-  Trash2
+  Trash2,
+  UserPlus
 } from 'lucide-react';
 import { storage } from '../../lib/storage';
 import { UserProfile } from '../../types';
@@ -31,6 +32,8 @@ export const AdminUsers: React.FC = () => {
     targetStatus: 'ACTIVE' | 'SUSPENDED' | 'BANNED' | 'DELETE';
   } | null>(null);
   const [reasonInput, setReasonInput] = useState('');
+  const [isTesterModalOpen, setIsTesterModalOpen] = useState(false);
+  const [testerData, setTesterData] = useState({ name: '', username: '', content: '', expiresAt: '' });
 
   useEffect(() => {
     loadUsers();
@@ -67,6 +70,59 @@ export const AdminUsers: React.FC = () => {
     loadUsers();
   };
 
+  const handleCreateTester = () => {
+    // Basic validation
+    if (!testerData.name || !testerData.username || !testerData.content || !testerData.expiresAt) {
+      alert('Semua field harus diisi!');
+      return;
+    }
+
+    // Expiration check: max 7 days from now
+    const selectedDate = new Date(testerData.expiresAt);
+    const maxDate = new Date();
+    maxDate.setDate(maxDate.getDate() + 7);
+    
+    if (selectedDate > maxDate) {
+      alert('Masa expired maksimal 7 hari dari sekarang!');
+      return;
+    }
+
+    // Logic to save user and drop (using storage)
+    const newUserId = `tester_${Date.now()}`;
+    const newUser = {
+      id: newUserId,
+      name: testerData.name,
+      username: testerData.username.startsWith('@') ? testerData.username : `@${testerData.username}`,
+      status: 'ACTIVE' as const,
+      role: 'USER' as const,
+      joinedAt: new Date().toISOString(),
+      avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${testerData.username}`
+    };
+    
+    storage.saveUser(newUser);
+    
+    // Create Drop
+    const newDrop = {
+      id: `drop_${Date.now()}`,
+      ownerId: newUserId,
+      content: testerData.content,
+      expiresAt: testerData.expiresAt,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Assuming storage has a saveDrop method. If not, this needs adjustment based on actual storage implementation.
+    // @ts-ignore
+    if (typeof storage.saveDrop === 'function') {
+      // @ts-ignore
+      storage.saveDrop(newDrop);
+    }
+    
+    setIsTesterModalOpen(false);
+    setTesterData({ name: '', username: '', content: '', expiresAt: '' });
+    loadUsers();
+    alert('Akun tester berhasil dibuat!');
+  };
+
   const filteredUsers = users.filter((user) => {
     const status = user.status || 'ACTIVE';
     if (statusFilter !== 'ALL' && status !== statusFilter) return false;
@@ -93,8 +149,17 @@ export const AdminUsers: React.FC = () => {
             Daftar akun terdaftar di Kepoin. Kontrol status keaktifan, penangguhan (suspend), atau blokir (ban).
           </p>
         </div>
-        <div className="text-xs font-bold text-slate-400 px-3 py-1.5 bg-slate-800 rounded-xl border border-slate-700">
-          Total: {users.length} Akun
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsTesterModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-[#12A889] hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+          >
+            <UserPlus size={16} />
+            Tambah Tester
+          </button>
+          <div className="text-xs font-bold text-slate-400 px-3 py-2 bg-slate-800 rounded-xl border border-slate-700">
+            Total: {users.length} Akun
+          </div>
         </div>
       </div>
 
@@ -432,6 +497,34 @@ export const AdminUsers: React.FC = () => {
               >
                 {statusModal.targetStatus === 'DELETE' ? 'YA, HAPUS PERMANEN' : 'Simpan Perubahan'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Tester Modal */}
+      {isTesterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl">
+            <h3 className="text-lg font-black text-white">Tambah Akun Tester</h3>
+            <div className="space-y-4">
+              <input type="text" placeholder="Nama" className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white" value={testerData.name} onChange={e => setTesterData({...testerData, name: e.target.value})} />
+              <input type="text" placeholder="Username (@...)" className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white" value={testerData.username} onChange={e => setTesterData({...testerData, username: e.target.value})} />
+              <textarea placeholder="Konten Drop" className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white" value={testerData.content} onChange={e => setTesterData({...testerData, content: e.target.value})} />
+              <div className="space-y-1">
+                <label className="text-xs text-slate-400">Tanggal Expired (Max 7 hari)</label>
+                <input 
+                  type="date" 
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-white" 
+                  value={testerData.expiresAt} 
+                  onChange={e => setTesterData({...testerData, expiresAt: e.target.value})}
+                  min={new Date().toISOString().split('T')[0]}
+                  max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setIsTesterModalOpen(false)} className="flex-1 py-2 rounded-lg bg-slate-800 text-white text-xs font-bold">Batal</button>
+              <button onClick={handleCreateTester} className="flex-1 py-2 rounded-lg bg-[#12A889] text-white text-xs font-bold">Simpan</button>
             </div>
           </div>
         </div>
